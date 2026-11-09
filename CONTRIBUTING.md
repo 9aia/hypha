@@ -36,3 +36,19 @@ belongs here.
 
 Follow Diátaxis: `docs/tutorials/` (learn) · `docs/how-to/` (tasks) ·
 `docs/reference/` (lookup) · `docs/explanation/` (why).
+
+## Releasing
+
+- crates.io publish is dep-ordered via `scripts/release.sh` (bupha
+  watch trigger — register the watch ops-side). First publish is
+  manual: tag once, then the script bumps + publishes + tags.
+- crates.io names: `hypha`/`hypha-hub` are taken — packages publish
+  under crate names (`hypha-node` ships the `hypha` bin,
+  `cargo install hypha-node`).
+- Release binaries: push a `v*`/`hypha-v*` tag —
+  `.github/workflows/release.yml` builds
+  `hypha-<target>.tar.gz` (linux x86_64, macOS aarch64/x86_64)
+  carrying the `hypha` + `hypha-hub` bins.
+- Org publish order for the substrate stack: **hypha → sepia →
+  peregrin** (sepia-peregrin and peregrin's git deps carry `version`
+  reqs that resolve against the registry once published).

@@ -529,3 +529,37 @@ async fn hub_state_from_boot_arms() {
         &cfg,
     );
 }
+
+/* ---- node lifecycle ----------------------------------------------------*/
+
+#[tokio::test]
+async fn node_status_and_entity_rows_carry_liveness() {
+    let (api, projection) = api_against(vec![hub_node("n1", "http://127.0.0.1:1")]);
+    projection
+        .upsert_node(&hypha_sync::NodeRef {
+            id: "n1".into(),
+            url: "http://127.0.0.1:1".into(),
+            label: "n1".into(),
+        })
+        .unwrap();
+    projection
+        .set_node_status("n1", hypha_sync::NodeStatus::Down)
+        .unwrap();
+    projection.set_node_ephemeral("n1", true).unwrap();
+    seed_entity(&projection, "n1", "s1", "Alpha");
+
+    let status = api.node_status().await.unwrap();
+    let row = status.iter().find(|n| n.id == "n1").unwrap();
+    assert_eq!(row.status, "down");
+    assert!(row.ephemeral);
+    assert!(row.down_since.is_some());
+    assert!(row.last_seen_at.is_none());
+
+    // The merged entity list marks the dead node's entries inline.
+    let entities = api.list_entities(None).await.unwrap();
+    let e = entities.iter().find(|e| e.id == "s1").unwrap();
+    assert_eq!(e.node.as_deref(), Some("n1"));
+    assert_eq!(e.node_status.as_deref(), Some("down"));
+    let single = api.entity("s1").await.unwrap();
+    assert_eq!(single.node_status.as_deref(), Some("down"));
+}

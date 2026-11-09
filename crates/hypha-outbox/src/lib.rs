@@ -349,6 +349,28 @@ impl Outbox {
         Ok(rows)
     }
 
+    /// Dead-letter every pending/in-flight entry queued for `node_id`
+    /// with `reason` as `last_error` — the sync engine calls this when
+    /// a self-declared ephemeral node stays down past its reap
+    /// threshold: the writes can never replay, so they surface as
+    /// `failed` (and stay resurrectable via [`Self::retry_dead`])
+    /// instead of pending forever.
+    ///
+    /// # Errors
+    /// On sqlite failure.
+    pub fn dead_letter_node(&self, node_id: &str, reason: &str) -> Result<usize, OutboxError> {
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let n = conn.execute(
+            "UPDATE outbox SET status='dead', last_error=?
+             WHERE node_id=? AND status IN ('pending','in_flight')",
+            params![reason, node_id],
+        )?;
+        Ok(n)
+    }
+
     /// Resurrect a dead-lettered entry for another attempt.
     ///
     /// # Errors
@@ -579,6 +601,53 @@ mod cov_tests {
             .unwrap();
         }
         assert!(outbox.mark_failed(&e.id, "x").is_err());
+    }
+
+    #[test]
+    fn dead_letter_node_moves_only_that_nodes_pending() {
+        let outbox = Outbox::in_memory().unwrap();
+        for (node, key) in [("n1", "k1"), ("n1", "k2"), ("n2", "k3")] {
+            outbox
+                .enqueue(
+                    node,
+                    "e1",
+                    "op",
+                    OpKind::Turn,
+                    serde_json::json!(1),
+                    key,
+                    None,
+                )
+                .unwrap();
+        }
+        // An already-done entry is untouched.
+        let done = outbox
+            .enqueue(
+                "n1",
+                "e2",
+                "op",
+                OpKind::Metadata,
+                serde_json::json!(2),
+                "k4",
+                None,
+            )
+            .unwrap();
+        outbox.mark_in_flight(&done.id).unwrap();
+        outbox.mark_done(&done.id).unwrap();
+
+        assert_eq!(outbox.dead_letter_node("n1", "node gone").unwrap(), 2);
+        assert_eq!(outbox.pending_for_node("n1").unwrap().len(), 0);
+        assert_eq!(outbox.pending_for_node("n2").unwrap().len(), 1);
+        let dead = outbox.dead_letters().unwrap();
+        assert_eq!(dead.len(), 2);
+        assert!(
+            dead.iter()
+                .all(|e| e.last_error.as_deref() == Some("node gone"))
+        );
+        // Idempotent — a second pass finds nothing pending.
+        assert_eq!(outbox.dead_letter_node("n1", "again").unwrap(), 0);
+        // And the dead entries stay resurrectable.
+        outbox.retry_dead(&dead[0].id).unwrap();
+        assert_eq!(outbox.pending_for_node("n1").unwrap().len(), 1);
     }
 
     #[test]

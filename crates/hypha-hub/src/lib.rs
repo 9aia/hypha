@@ -224,6 +224,7 @@ pub fn router(state: HubState) -> Router {
             any(entity_routes::snapshot_item),
         )
         .route("/api/entity-index", get(entity_routes::entity_index))
+        .route("/api/node-status", get(entity_routes::node_status))
         .route("/api/pending-ops", get(entity_routes::pending_ops))
         // SSE bridges — must be registered before the `/api/*` wildcard.
         .route("/api/events", get(proxy::sse_events))

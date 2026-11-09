@@ -293,3 +293,102 @@ fn apply_patch_non_object_skips_merge() {
     );
     assert_eq!(store.entity("n1", "s1").unwrap().unwrap().raw["title"], "T");
 }
+
+/* ---- node lifecycle (ephemeral awareness) ----------------------------*/
+
+fn node_ref(id: &str) -> NodeRef {
+    NodeRef {
+        id: id.into(),
+        url: format!("http://{id}"),
+        label: id.into(),
+    }
+}
+
+#[test]
+fn node_row_tracks_status_down_since_and_ephemeral() {
+    let store = ProjectionStore::in_memory().unwrap();
+    store.upsert_node(&node_ref("n1")).unwrap();
+    let row = store.node("n1").unwrap().unwrap();
+    assert_eq!(row.status, NodeStatus::Unknown);
+    assert!(row.down_since.is_none());
+    assert!(!row.ephemeral);
+
+    store.set_node_status("n1", NodeStatus::Up).unwrap();
+    store.set_node_status("n1", NodeStatus::Down).unwrap();
+    let first = store.node("n1").unwrap().unwrap().down_since.unwrap();
+    assert_eq!(store.node("n1").unwrap().unwrap().status, NodeStatus::Down);
+
+    // Repeated downs keep the first stamp — "down since", not "last
+    // retry".
+    std::thread::sleep(std::time::Duration::from_millis(2));
+    store.set_node_status("n1", NodeStatus::Down).unwrap();
+    assert_eq!(
+        store.node("n1").unwrap().unwrap().down_since.unwrap(),
+        first
+    );
+
+    // Up clears it; a later down restamps.
+    store.set_node_status("n1", NodeStatus::Up).unwrap();
+    assert!(store.node("n1").unwrap().unwrap().down_since.is_none());
+    store.set_node_status("n1", NodeStatus::Down).unwrap();
+    assert_ne!(
+        store.node("n1").unwrap().unwrap().down_since.unwrap(),
+        first
+    );
+
+    store.set_node_ephemeral("n1", true).unwrap();
+    assert!(store.node("n1").unwrap().unwrap().ephemeral);
+    assert!(store.nodes().unwrap()[0].ephemeral);
+}
+
+#[test]
+fn drop_node_entities_keeps_the_node_row() {
+    let store = ProjectionStore::in_memory().unwrap();
+    store.upsert_node(&node_ref("n1")).unwrap();
+    store
+        .apply_listing(
+            "n1",
+            &[json!({"id":"e1","kind":"k","updatedAt":"2024-01-01T00:00:00Z"})],
+        )
+        .unwrap();
+    assert!(store.entity("n1", "e1").unwrap().is_some());
+    assert!(store.cursor("n1").unwrap().is_some());
+
+    store.drop_node_entities("n1").unwrap();
+    assert_eq!(store.entities(Some("n1")).unwrap().len(), 0);
+    assert!(store.cursor("n1").unwrap().is_none());
+    // The node row survives — status stays reportable.
+    assert!(store.node("n1").unwrap().is_some());
+}
+
+#[test]
+fn legacy_nodes_schema_gains_lifecycle_columns() {
+    // A pre-ephemeral projection.db: `nodes` without the new columns.
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("proj.db");
+    {
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE nodes (
+                id TEXT PRIMARY KEY,
+                url TEXT NOT NULL,
+                label TEXT NOT NULL,
+                last_seen_at TEXT,
+                status TEXT NOT NULL DEFAULT 'unknown'
+            );
+            INSERT INTO nodes (id,url,label,status) VALUES ('old','http://old','old','up');",
+        )
+        .unwrap();
+    }
+    let store = ProjectionStore::open(&path).unwrap();
+    let row = store.node("old").unwrap().unwrap();
+    assert_eq!(row.status, NodeStatus::Up);
+    assert!(!row.ephemeral);
+    assert!(row.down_since.is_none());
+    // The migrated columns are writable.
+    store.set_node_ephemeral("old", true).unwrap();
+    store.set_node_status("old", NodeStatus::Down).unwrap();
+    let row = store.node("old").unwrap().unwrap();
+    assert!(row.ephemeral);
+    assert!(row.down_since.is_some());
+}

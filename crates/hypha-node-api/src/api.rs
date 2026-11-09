@@ -390,13 +390,26 @@ impl EntityApi for HttpEntityApi {
             // reachable `/api/node` means the node is up.
             match api.get("/api/node") {
                 Ok(mut res) if res.status().is_success() => {
-                    let _ = res.body_mut().read_to_string();
+                    // The descriptor's `capabilities` carry the
+                    // node's self-reported lifecycle flags
+                    // (`"ephemeral"` for disposable nodes) — surface
+                    // them on the synthesized row.
+                    let ephemeral = res
+                        .body_mut()
+                        .read_to_string()
+                        .ok()
+                        .and_then(|body| serde_json::from_str::<serde_json::Value>(&body).ok())
+                        .and_then(|v| v.get("capabilities").cloned())
+                        .and_then(|c| c.as_array().cloned())
+                        .is_some_and(|caps| caps.iter().any(|c| c.as_str() == Some("ephemeral")));
                     Ok(vec![NodeStatusDto {
                         id: "node".into(),
                         url: api.base.clone(),
                         label: "node".into(),
                         status: "up".into(),
                         last_seen_at: None,
+                        down_since: None,
+                        ephemeral,
                     }])
                 }
                 Ok(res) => Err(error_of(res, "node status")),
@@ -406,6 +419,8 @@ impl EntityApi for HttpEntityApi {
                     label: "node".into(),
                     status: "down".into(),
                     last_seen_at: Some(e),
+                    down_since: None,
+                    ephemeral: false,
                 }]),
             }
         })

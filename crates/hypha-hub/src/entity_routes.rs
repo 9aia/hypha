@@ -190,6 +190,23 @@ pub async fn entity_index(State(state): State<HubState>, method: Method) -> Resp
     }
 }
 
+/// `GET /api/node-status` — per-node liveness rows from the sync
+/// projection: `status` (`unknown`/`up`/`down`), `lastSeenAt`,
+/// `downSince` (first observed failure), and `ephemeral` (the node's
+/// self-reported disposable lifecycle — reaped once it stays down).
+/// This is the surface that lets consumers tell a dead runner from a
+/// slow one; merged entity lists carry the same status inline as
+/// `nodeStatus`.
+pub async fn node_status(State(state): State<HubState>, method: Method) -> Response {
+    if method != Method::GET {
+        return not_found();
+    }
+    match state.node.node_status().await {
+        Ok(nodes) => json_response(json!({ "nodes": nodes }), StatusCode::OK),
+        Err(e) => api_err(&e),
+    }
+}
+
 /// `GET /api/pending-ops` — outbox depth: queued + dead-letter ops.
 pub async fn pending_ops(State(state): State<HubState>, method: Method) -> Response {
     if method != Method::GET {

@@ -16,6 +16,12 @@ pub struct EntityDto {
     /// Owning node id on multi-node setups (empty → unknown/local).
     #[serde(default)]
     pub node: Option<String>,
+    /// The owning node's reachability (`"up"`/`"down"`/`"unknown"`) —
+    /// populated by hub-side merged lists so consumers can tell a
+    /// dead node's stale index entries from live ones. `None` on
+    /// direct node connections (the node is the answer).
+    #[serde(default)]
+    pub node_status: Option<String>,
     /// The integration's list-view document — title, timestamps,
     /// grouping keys, flags. Opaque to hypha.
     #[serde(default)]
@@ -106,6 +112,15 @@ pub struct NodeStatusDto {
     pub status: String,
     #[serde(default)]
     pub last_seen_at: Option<String>,
+    /// RFC 3339 — when the node entered `down` (cleared on reconnect);
+    /// `None` while up/unknown.
+    #[serde(default)]
+    pub down_since: Option<String>,
+    /// The node self-reported `"ephemeral"` in `/api/node`
+    /// `capabilities` — a disposable lifecycle (CI runner) the hub
+    /// reaps once it stays down past its threshold.
+    #[serde(default)]
+    pub ephemeral: bool,
 }
 
 /// `POST /api/push/subscribe` — the keys sub-object.

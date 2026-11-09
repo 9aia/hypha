@@ -47,6 +47,13 @@ pub struct SyncOptions {
     pub backoff_max: Duration,
     /// Periodic full `list_entities` reconcile while subscribed.
     pub resync_interval: Duration,
+    /// How long a self-declared *ephemeral* node (its `/api/node`
+    /// `capabilities` carry `"ephemeral"` — CI runners) may stay
+    /// continuously `down` before the engine reaps it: projected
+    /// entities are dropped (a resurrected node resyncs itself) and
+    /// its queued writes dead-letter. Ordinary nodes are never
+    /// reaped — they keep retrying at `backoff_max` forever.
+    pub ephemeral_dead_after: Duration,
     /// Capacity of the per-node SSE event channel.
     pub feed_channel: usize,
     /// Optional per-event hook (node id + frame). Inert `None`.
@@ -66,6 +73,7 @@ impl Default for SyncOptions {
             backoff_min: Duration::from_secs(1),
             backoff_max: Duration::from_secs(30),
             resync_interval: Duration::from_secs(300),
+            ephemeral_dead_after: Duration::from_secs(300),
             feed_channel: 256,
             on_event: None,
             policies: KindPolicies::new(),
@@ -331,6 +339,19 @@ impl SyncHandle {
             &write.idempotency_key,
             write.ttl_seconds,
         )?;
+        // A confirmed-dead ephemeral node's writes can never replay —
+        // dead-letter them now rather than leaving them pending until
+        // the sync loop's next reap pass.
+        if ephemeral_dead(
+            &self.shared.projection,
+            &write.node_id,
+            self.shared.options.ephemeral_dead_after,
+        ) {
+            let _ = self
+                .shared
+                .outbox
+                .dead_letter_node(&write.node_id, "ephemeral node down past reap threshold");
+        }
         Ok(SubmitOutcome::Queued(Box::new(entry)))
     }
 
@@ -471,6 +492,17 @@ async fn node_loop(target: NodeTarget, shared: Arc<Shared>, cancel: Cancellation
         {
             tracing::warn!(node = %node_id, "failed to mark node down");
         }
+        // Self-declared ephemeral nodes get reaped once they've been
+        // down past `ephemeral_dead_after`. The check is idempotent,
+        // so it runs on every failed cycle — cheap, and it also
+        // catches writes enqueued between reaps.
+        if ephemeral_dead(
+            &shared.projection,
+            &node_id,
+            shared.options.ephemeral_dead_after,
+        ) {
+            reap_ephemeral_node(&shared, &node_id);
+        }
         // A previously-healthy stream that dropped retries fast;
         // repeated connect failures back off exponentially.
         let wait = jittered(delay);
@@ -550,6 +582,18 @@ async fn connect_once(
     };
     if let Err(e) = shared.projection.apply_listing(&node.id, &docs) {
         tracing::warn!(node = %node.id, "projection apply_listing failed: {e}");
+    }
+    // Self-reported lifecycle: `/api/node`'s `capabilities` carry
+    // `"ephemeral"` for disposable nodes (CI runners). Best-effort —
+    // a node that doesn't answer keeps its previous flag.
+    if let Ok(info) = blocking(client.clone(), |c| c.get_json("/api/node")).await {
+        let ephemeral = info
+            .get("capabilities")
+            .and_then(Value::as_array)
+            .is_some_and(|caps| caps.iter().any(|c| c.as_str() == Some("ephemeral")));
+        if let Err(e) = shared.projection.set_node_ephemeral(&node.id, ephemeral) {
+            tracing::warn!(node = %node.id, "failed to record node capabilities: {e}");
+        }
     }
     if let Err(e) = shared.projection.set_node_status(&node.id, NodeStatus::Up) {
         tracing::warn!(node = %node.id, "failed to mark node up: {e}");
@@ -723,6 +767,51 @@ async fn drain_outbox(node: &NodeRef, client: &NodeClient, shared: &Arc<Shared>)
     }
 }
 
+/// `true` when `node_id`'s row is a self-declared ephemeral node that
+/// has been continuously `down` longer than `after` — the reap
+/// predicate. `down_since` is an RFC 3339 stamp persisted in the
+/// projection, so the verdict survives hub restarts.
+fn ephemeral_dead(projection: &ProjectionStore, node_id: &str, after: Duration) -> bool {
+    let Ok(Some(row)) = projection.node(node_id) else {
+        return false;
+    };
+    if !row.ephemeral {
+        return false;
+    }
+    let Some(since) = row.down_since.as_deref() else {
+        return false;
+    };
+    let Ok(since) =
+        time::OffsetDateTime::parse(since, &time::format_description::well_known::Rfc3339)
+    else {
+        return false;
+    };
+    let threshold = time::Duration::seconds(i64::try_from(after.as_secs()).unwrap_or(i64::MAX));
+    // A future/garbage stamp reads as not-yet-dead — the subtraction
+    // goes negative and the comparison fails.
+    time::OffsetDateTime::now_utc() - since > threshold
+}
+
+/// Reap a confirmed-dead ephemeral node: drop its projected entities
+/// and resync cursor (a resurrected node resyncs itself) and
+/// dead-letter its queued writes — they can never replay. The `nodes`
+/// row stays so node status keeps reporting `down` + `ephemeral`.
+fn reap_ephemeral_node(shared: &Arc<Shared>, node_id: &str) {
+    if let Err(e) = shared.projection.drop_node_entities(node_id) {
+        tracing::warn!(node = %node_id, "ephemeral reap: entity drop failed: {e}");
+    }
+    match shared
+        .outbox
+        .dead_letter_node(node_id, "ephemeral node down past reap threshold")
+    {
+        Ok(0) => {}
+        Ok(n) => {
+            tracing::info!(node = %node_id, "ephemeral reap: dead-lettered {n} queued write(s)");
+        }
+        Err(e) => tracing::warn!(node = %node_id, "ephemeral reap: dead-letter failed: {e}"),
+    }
+}
+
 /// Apply one feed frame to the projection.
 #[tracing::instrument(name = "sync_apply_event", skip_all, fields(node.id = %node.id))]
 async fn apply_event(
@@ -843,6 +932,7 @@ mod tests {
             backoff_min: Duration::from_millis(30),
             backoff_max: Duration::from_millis(200),
             resync_interval: Duration::from_secs(3600),
+            ephemeral_dead_after: Duration::from_secs(3600),
             feed_channel: 8,
             on_event: None,
             policies: KindPolicies::new(),
@@ -850,10 +940,14 @@ mod tests {
     }
 
     fn shared() -> Arc<Shared> {
+        shared_with(options())
+    }
+
+    fn shared_with(options: SyncOptions) -> Arc<Shared> {
         Arc::new(Shared {
             projection: ProjectionStore::in_memory().unwrap(),
             outbox: Outbox::in_memory().unwrap(),
-            options: options(),
+            options,
             targets: Mutex::new(HashMap::new()),
             active_pumps: Arc::new(AtomicUsize::new(0)),
         })
@@ -1049,5 +1143,169 @@ mod tests {
         let client =
             NodeClient::with_config(&node.url, None, shared.options.client_config()).unwrap();
         assert!(refetch(&node, &client, &shared, "s1").await.is_err());
+    }
+
+    /// Canned node routing on the request path: `/api/events` → the
+    /// held-open heartbeat stream, `/api/node` → `node_info`,
+    /// everything else → `rest` (the entity listing).
+    fn routed_node(node_info: &'static str, rest: &'static str) -> u16 {
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            while let Ok((mut conn, _)) = listener.accept() {
+                std::thread::spawn(move || {
+                    let mut buf = [0u8; 8192];
+                    let n = conn.read(&mut buf).unwrap_or(0);
+                    let req = String::from_utf8_lossy(&buf[..n]);
+                    if req.contains("/api/events") {
+                        let _ = conn.write_all(
+                            b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n\r\n",
+                        );
+                        for _ in 0..100 {
+                            if conn.write_all(b"event: heartbeat\ndata: {}\n\n").is_err() {
+                                break;
+                            }
+                            let _ = conn.flush();
+                            std::thread::sleep(Duration::from_millis(30));
+                        }
+                    } else {
+                        let body = if req.contains("/api/node") {
+                            node_info
+                        } else {
+                            rest
+                        };
+                        let _ = conn.write_all(
+                            format!(
+                                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                                body.len()
+                            )
+                            .as_bytes(),
+                        );
+                    }
+                });
+            }
+        });
+        port
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn connect_once_records_self_reported_ephemeral() {
+        // `/api/node` capabilities carry `"ephemeral"` → the node row
+        // records it; without the tag the flag stays false.
+        for (caps, want) in [
+            (r#"["entities","ephemeral"]"#, true),
+            (r#"["entities","events"]"#, false),
+        ] {
+            let info = format!(r#"{{"id":"n","capabilities":{caps}}}"#);
+            // Leak the per-iteration body — the canned thread needs
+            // 'static; tests are short-lived.
+            let info: &'static str = Box::leak(info.into_boxed_str());
+            let port = routed_node(info, "{\"entities\":[]}");
+            let shared = shared();
+            let n = node(format!("http://127.0.0.1:{port}"));
+            shared.projection.upsert_node(&n).unwrap();
+            let client =
+                NodeClient::with_config(&n.url, None, shared.options.client_config()).unwrap();
+            let cancel = CancellationToken::new();
+            let task = {
+                let n = n.clone();
+                let client = client.clone();
+                let shared = Arc::clone(&shared);
+                let cancel = cancel.clone();
+                tokio::spawn(async move { connect_once(&n, &client, &shared, &cancel).await })
+            };
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            cancel.cancel();
+            let _ = task.await.unwrap();
+            let row = shared.projection.node("n").unwrap().unwrap();
+            assert_eq!(row.ephemeral, want, "capabilities {caps}");
+            assert_eq!(row.status, NodeStatus::Up);
+        }
+    }
+
+    /// A dead ephemeral node past `ephemeral_dead_after`: projected
+    /// entities drop, queued writes dead-letter, the node row stays
+    /// `down` + `ephemeral`. A non-ephemeral node keeps everything.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn node_loop_reaps_only_dead_ephemeral_nodes() {
+        for ephemeral in [true, false] {
+            let mut opts = options();
+            // Sub-second thresholds collapse to 0s — any observed down
+            // duration reaps immediately.
+            opts.ephemeral_dead_after = Duration::from_millis(1);
+            let shared = shared_with(opts);
+            let n = node("http://127.0.0.1:1".into());
+            shared.projection.upsert_node(&n).unwrap();
+            shared
+                .projection
+                .set_node_ephemeral("n", ephemeral)
+                .unwrap();
+            shared
+                .projection
+                .upsert_entity("n", &serde_json::json!({"id":"e1","kind":"k"}))
+                .unwrap();
+            shared
+                .outbox
+                .enqueue(
+                    "n",
+                    "e1",
+                    "op",
+                    hypha_outbox::OpKind::Turn,
+                    serde_json::json!({}),
+                    "k1",
+                    None,
+                )
+                .unwrap();
+            let target = NodeTarget::new(n);
+            let cancel = CancellationToken::new();
+            let task = {
+                let shared = Arc::clone(&shared);
+                let cancel = cancel.clone();
+                tokio::spawn(async move { node_loop(target, shared, cancel).await })
+            };
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            cancel.cancel();
+            task.await.unwrap();
+
+            let row = shared.projection.node("n").unwrap().unwrap();
+            assert_eq!(row.status, NodeStatus::Down);
+            assert!(row.down_since.is_some());
+            if ephemeral {
+                assert_eq!(shared.projection.entities(Some("n")).unwrap().len(), 0);
+                assert_eq!(shared.outbox.pending_for_node("n").unwrap().len(), 0);
+                assert_eq!(shared.outbox.dead_letters().unwrap().len(), 1);
+            } else {
+                assert_eq!(shared.projection.entities(Some("n")).unwrap().len(), 1);
+                assert_eq!(shared.outbox.pending_for_node("n").unwrap().len(), 1);
+                assert_eq!(shared.outbox.dead_letters().unwrap().len(), 0);
+            }
+        }
+    }
+
+    #[test]
+    fn ephemeral_dead_predicate_arms() {
+        // Missing row / not ephemeral / no down_since / fresh down →
+        // all false; a stamped past down_since on an ephemeral node →
+        // true. `down_since` is only writable via `set_node_status`,
+        // so the "past" arm rides a zero-ish threshold instead.
+        let shared = shared();
+        let proj = &shared.projection;
+        proj.upsert_node(&node("http://127.0.0.1:1".into()))
+            .unwrap();
+        assert!(!ephemeral_dead(proj, "n", Duration::ZERO));
+        proj.set_node_ephemeral("n", true).unwrap();
+        // Up → no down_since.
+        proj.set_node_status("n", NodeStatus::Up).unwrap();
+        assert!(!ephemeral_dead(proj, "n", Duration::ZERO));
+        // Fresh down with a real threshold → false.
+        proj.set_node_status("n", NodeStatus::Down).unwrap();
+        assert!(!ephemeral_dead(proj, "n", Duration::from_secs(3600)));
+        // Zero threshold → any elapsed down counts.
+        assert!(ephemeral_dead(proj, "n", Duration::ZERO));
+        // Unknown node id → false.
+        assert!(!ephemeral_dead(proj, "ghost", Duration::ZERO));
+        // Non-ephemeral with an old-enough down → still false.
+        proj.set_node_ephemeral("n", false).unwrap();
+        assert!(!ephemeral_dead(proj, "n", Duration::ZERO));
     }
 }

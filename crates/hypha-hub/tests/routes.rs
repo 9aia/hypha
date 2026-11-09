@@ -572,3 +572,21 @@ async fn entity_index_and_pending_ops() {
     let v: Value = serde_json::from_str(&body).unwrap();
     assert!(v["ops"].is_array());
 }
+
+#[tokio::test]
+async fn node_status_route_reports_liveness_rows() {
+    let app = hypha_hub::router(state("http://127.0.0.1:1"));
+    let (status, body) = call(&app, get("/api/node-status")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let v: Value = serde_json::from_str(&body).unwrap();
+    let nodes = v["nodes"].as_array().unwrap();
+    assert_eq!(nodes.len(), 1);
+    assert_eq!(nodes[0]["id"], "node");
+    assert_eq!(nodes[0]["status"], "up");
+    // Non-GET → 405 — the route only registers GET.
+    let req = Request::post("/api/node-status")
+        .body(Body::empty())
+        .unwrap();
+    let (status, _) = call(&app, req).await;
+    assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
+}

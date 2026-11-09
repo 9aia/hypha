@@ -73,6 +73,7 @@ impl FakeEntityApi {
                 label: "node".into(),
                 status: "up".into(),
                 last_seen_at: None,
+                ..NodeStatusDto::default()
             }],
             pending: Vec::new(),
             error: None,

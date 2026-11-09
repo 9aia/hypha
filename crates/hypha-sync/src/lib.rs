@@ -10,6 +10,15 @@
 //! Writes while a node is down go through [`SyncHandle::submit_op`],
 //! which posts directly when the node is up and enqueues into
 //! `hypha-outbox` otherwise.
+//!
+//! Node liveness lives on the `nodes` row: `status`
+//! (`unknown`/`up`/`down`), `last_seen_at`, `down_since` (first
+//! observed failure, cleared on reconnect), and `ephemeral` — the
+//! node's self-reported `/api/node` `capabilities` flag for
+//! disposable lifecycles (CI runners). An ephemeral node that stays
+//! down past [`SyncOptions::ephemeral_dead_after`] is reaped: its
+//! projected entities drop (a resurrected node resyncs itself) and
+//! its queued writes dead-letter instead of pending forever.
 
 pub mod client;
 pub mod engine;
@@ -103,6 +112,15 @@ pub struct NodeRow {
     /// RFC 3339 — last time a request to the node succeeded.
     pub last_seen_at: Option<String>,
     pub status: NodeStatus,
+    /// The node self-reported `"ephemeral"` in its `/api/node`
+    /// `capabilities` — a disposable lifecycle (CI runner): when it
+    /// stays down past the engine's reap threshold its projected
+    /// entities are dropped and its queued writes dead-letter.
+    pub ephemeral: bool,
+    /// RFC 3339 — when the node entered `down`, cleared on `up`.
+    /// `None` while `unknown`/`up` or before the first observed
+    /// failure.
+    pub down_since: Option<String>,
 }
 
 /// An `entities` row — one node's index doc for an entity. `raw` keeps
@@ -140,7 +158,9 @@ CREATE TABLE IF NOT EXISTS nodes (
     url TEXT NOT NULL,
     label TEXT NOT NULL,
     last_seen_at TEXT,
-    status TEXT NOT NULL DEFAULT 'unknown'
+    status TEXT NOT NULL DEFAULT 'unknown',
+    ephemeral INTEGER NOT NULL DEFAULT 0,
+    down_since TEXT
 );
 CREATE TABLE IF NOT EXISTS entities (
     node_id TEXT NOT NULL,
@@ -284,6 +304,7 @@ impl ProjectionStore {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "busy_timeout", 5000)?;
         conn.execute_batch(SCHEMA)?;
+        migrate_nodes_schema(&conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
             policies: crate::kind::KindPolicies::new(),
@@ -354,7 +375,7 @@ impl ProjectionStore {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut stmt =
-            conn.prepare("SELECT id, url, label, last_seen_at, status FROM nodes WHERE id=?")?;
+            conn.prepare("SELECT id, url, label, last_seen_at, status, ephemeral, down_since FROM nodes WHERE id=?")?;
         let mut rows = stmt.query_map(params![id], node_row)?;
         match rows.next() {
             Some(row) => Ok(Some(row?)),
@@ -371,15 +392,19 @@ impl ProjectionStore {
             .conn
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let mut stmt =
-            conn.prepare("SELECT id, url, label, last_seen_at, status FROM nodes ORDER BY id")?;
+        let mut stmt = conn.prepare(
+            "SELECT id, url, label, last_seen_at, status, ephemeral, down_since FROM nodes ORDER BY id",
+        )?;
         let rows = stmt
             .query_map([], node_row)?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(rows)
     }
 
-    /// Record reachability. `Up` also stamps `last_seen_at`.
+    /// Record reachability. `Up` also stamps `last_seen_at` and clears
+    /// `down_since`; the first `Down` after an up/unknown stamps
+    /// `down_since` (repeated downs keep the original timestamp —
+    /// `COALESCE` — so it reads as "down *since*", not "last retry").
     ///
     /// # Errors
     /// On sqlite failure.
@@ -390,7 +415,13 @@ impl ProjectionStore {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         if status == NodeStatus::Up {
             conn.execute(
-                "UPDATE nodes SET status='up', last_seen_at=? WHERE id=?",
+                "UPDATE nodes SET status='up', last_seen_at=?, down_since=NULL WHERE id=?",
+                params![now_rfc3339(), id],
+            )?;
+        } else if status == NodeStatus::Down {
+            conn.execute(
+                "UPDATE nodes SET status='down',
+                    down_since=COALESCE(down_since, ?) WHERE id=?",
                 params![now_rfc3339(), id],
             )?;
         } else {
@@ -399,6 +430,23 @@ impl ProjectionStore {
                 params![status.as_str(), id],
             )?;
         }
+        Ok(())
+    }
+
+    /// Record the node's self-reported ephemeral flag — refreshed on
+    /// every successful `/api/node` read during a connect cycle.
+    ///
+    /// # Errors
+    /// On sqlite failure.
+    pub fn set_node_ephemeral(&self, id: &str, ephemeral: bool) -> Result<(), SyncError> {
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        conn.execute(
+            "UPDATE nodes SET ephemeral=? WHERE id=?",
+            params![i64::from(ephemeral), id],
+        )?;
         Ok(())
     }
 
@@ -548,6 +596,25 @@ impl ProjectionStore {
         Ok(())
     }
 
+    /// Drop a node's projected entities and resync cursor while keeping
+    /// its `nodes` row — the engine calls this when a self-declared
+    /// ephemeral node stays down past the reap threshold: the node's
+    /// state is gone for good, so its index entries stop masquerading
+    /// as live entities. The node row (and its `down`/`ephemeral`
+    /// status) stays visible; a resurrected node resyncs itself.
+    ///
+    /// # Errors
+    /// On sqlite failure.
+    pub fn drop_node_entities(&self, node_id: &str) -> Result<(), SyncError> {
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        conn.execute("DELETE FROM entities WHERE node_id=?", params![node_id])?;
+        conn.execute("DELETE FROM sync_state WHERE node_id=?", params![node_id])?;
+        Ok(())
+    }
+
     /// Drop one projected entity (tombstone applied).
     ///
     /// # Errors
@@ -657,7 +724,29 @@ fn node_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NodeRow> {
         label: row.get("label")?,
         last_seen_at: row.get("last_seen_at")?,
         status: NodeStatus::parse(&row.get::<_, String>("status")?),
+        ephemeral: row.get::<_, i64>("ephemeral")? != 0,
+        down_since: row.get("down_since")?,
     })
+}
+
+/// `CREATE TABLE IF NOT EXISTS` leaves pre-ephemeral `nodes` tables
+/// without the `ephemeral`/`down_since` columns — add them in place
+/// (same pattern as `hypha-outbox`'s legacy migration).
+fn migrate_nodes_schema(conn: &Connection) -> Result<(), SyncError> {
+    let mut stmt = conn.prepare("SELECT name FROM pragma_table_info('nodes')")?;
+    let names: Vec<String> = stmt
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<_, _>>()?;
+    if !names.iter().any(|n| n == "ephemeral") {
+        conn.execute(
+            "ALTER TABLE nodes ADD COLUMN ephemeral INTEGER NOT NULL DEFAULT 0",
+            [],
+        )?;
+    }
+    if !names.iter().any(|n| n == "down_since") {
+        conn.execute("ALTER TABLE nodes ADD COLUMN down_since TEXT", [])?;
+    }
+    Ok(())
 }
 
 /// A write destined for a node — the input to [`SyncHandle::submit_op`].

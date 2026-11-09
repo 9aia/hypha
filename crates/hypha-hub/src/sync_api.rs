@@ -545,11 +545,15 @@ impl SyncEntityApi {
 
 /// `IndexedEntity` → the DTO — `index_doc` comes out of the raw doc's
 /// `indexDoc` slot when the wire wrapped it, else the row itself.
-fn entity_dto(row: &IndexedEntity) -> EntityDto {
+/// `node_status` is the owning node's projection reachability
+/// (`"up"`/`"down"`/`"unknown"`) so merged lists can mark a dead
+/// node's stale entries; `None` leaves the field empty.
+fn entity_dto(row: &IndexedEntity, node_status: Option<&str>) -> EntityDto {
     EntityDto {
         id: row.entity_id.clone(),
         kind: row.kind.clone(),
         node: Some(row.node_id.clone()),
+        node_status: node_status.map(str::to_string),
         index_doc: row
             .raw
             .get("indexDoc")
@@ -584,18 +588,33 @@ fn pending_dto(e: &OutboxEntry) -> PendingOpDto {
 #[async_trait::async_trait]
 impl EntityApi for SyncEntityApi {
     async fn list_entities(&self, kind: Option<&str>) -> Result<Vec<EntityDto>, String> {
-        let rows: Vec<IndexedEntity> = self.projection().entities(None).map_err(proj_err)?;
+        let projection = self.projection();
+        let rows: Vec<IndexedEntity> = projection.entities(None).map_err(proj_err)?;
+        // One nodes() read joins each row's owning-node reachability —
+        // a dead runner's stale entries read `"down"` inline.
+        let statuses: HashMap<String, String> = projection
+            .nodes()
+            .map_err(proj_err)?
+            .into_iter()
+            .map(|n| (n.id, n.status.as_str().to_string()))
+            .collect();
         Ok(rows
             .iter()
             .filter(|row| kind.is_none_or(|k| row.kind == k))
-            .map(entity_dto)
+            .map(|row| entity_dto(row, statuses.get(&row.node_id).map(String::as_str)))
             .collect())
     }
 
     async fn entity(&self, id: &str) -> Result<EntityDto, String> {
         let registry = self.registry();
-        let (_node_id, _node, row) = owner_row(&self.projection(), id, None, &registry.nodes)?;
-        Ok(entity_dto(&row))
+        let (node_id, _node, row) = owner_row(&self.projection(), id, None, &registry.nodes)?;
+        let status = self
+            .projection()
+            .node(&node_id)
+            .ok()
+            .flatten()
+            .map(|n| n.status.as_str().to_string());
+        Ok(entity_dto(&row, status.as_deref()))
     }
 
     async fn create_entity(
@@ -697,11 +716,12 @@ impl EntityApi for SyncEntityApi {
         tokio::task::spawn_blocking(move || {
             let mut out = Vec::new();
             for node in projection.nodes().map_err(proj_err)? {
+                let status = node.status.as_str().to_string();
                 let entities = projection
                     .entities(Some(&node.id))
                     .map_err(proj_err)?
                     .iter()
-                    .map(entity_dto)
+                    .map(|row| entity_dto(row, Some(&status)))
                     .collect();
                 out.push(EntityIndexDto {
                     node: node.id,
@@ -772,6 +792,8 @@ impl EntityApi for SyncEntityApi {
                     label: n.label,
                     status: n.status.as_str().to_string(),
                     last_seen_at: n.last_seen_at,
+                    down_since: n.down_since,
+                    ephemeral: n.ephemeral,
                 })
                 .collect();
             // Registered-but-never-synced nodes still get a row.
@@ -783,6 +805,8 @@ impl EntityApi for SyncEntityApi {
                         label: id.clone(),
                         status: "unknown".into(),
                         last_seen_at: None,
+                        down_since: None,
+                        ephemeral: false,
                     });
                 }
             }

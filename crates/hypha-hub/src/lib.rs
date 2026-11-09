@@ -218,16 +218,11 @@ pub fn router(state: HubState) -> Router {
         // The merged entity surface — substrate reads hit the
         // projection, ops ride the outbox. Must be registered before
         // the `/api/*` passthrough so they win over single-node routing.
-        // The `export`/`import`/`index`/`outbox` spellings are aliases
-        // for the same handlers — `hypha-node-api`'s `HttpEntityApi`
-        // speaks them.
+        // Canonical spellings only — `hypha-node-api`'s `HttpEntityApi`
+        // and `hypha-http`'s node routes speak the same paths.
         .route("/api/entities", any(entity_routes::collection))
         .route(
             "/api/entities/snapshot",
-            any(entity_routes::snapshot_collection),
-        )
-        .route(
-            "/api/entities/import",
             any(entity_routes::snapshot_collection),
         )
         .route("/api/entities/{id}", any(entity_routes::item))
@@ -236,14 +231,8 @@ pub fn router(state: HubState) -> Router {
             "/api/entities/{id}/snapshot",
             any(entity_routes::snapshot_item),
         )
-        .route(
-            "/api/entities/{id}/export",
-            any(entity_routes::snapshot_item),
-        )
         .route("/api/entity-index", get(entity_routes::entity_index))
-        .route("/api/index", get(entity_routes::entity_index))
         .route("/api/pending-ops", get(entity_routes::pending_ops))
-        .route("/api/outbox", get(entity_routes::pending_ops))
         // SSE bridges — must be registered before the `/api/*` wildcard.
         .route("/api/events", get(proxy::sse_events))
         .route("/api/entities/{id}/stream", get(proxy::sse_entity_stream))

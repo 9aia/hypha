@@ -403,8 +403,9 @@ async fn log_layer(req: Request<Body>, next: Next) -> Response {
 /// [`app_routes`] vs [`app`]).
 ///
 /// Only the kind-agnostic surface: health, pairing + auth bootstrap,
-/// node, fs, user, the event feed, `/api/entities*`, and
-/// `/api/push/*`. Every route is `any()` + an internal method guard so
+/// node, fs, user, the event feed, `/api/entities*` plus the
+/// `/api/entity-index`/`/api/pending-ops` reads, and `/api/push/*`.
+/// Every route is `any()` + an internal method guard so
 /// wrong-method requests fall through to the 404 (rather than axum's
 /// bare 405). Integrations nest their own routes around or inside
 /// this router and register entity planes on the shared
@@ -432,6 +433,8 @@ pub fn app_routes(state: &HyphaState) -> Router<HyphaState> {
             "/api/entities/{id}/snapshot",
             any(routes::entities::snapshot_item),
         )
+        .route("/api/entity-index", any(routes::entities::entity_index))
+        .route("/api/pending-ops", any(routes::entities::pending_ops))
         .route("/api/push/vapid", any(routes::push::vapid))
         .route("/api/push/subscribe", any(routes::push::subscribe))
         // Every body read goes through `read_json_body` with an

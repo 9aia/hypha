@@ -3,8 +3,9 @@
 //!
 //! A bare `hypha serve` mounts zero entity kinds — the substrate
 //! surface (`/api/health`, `/api/node`, `/api/events`, `/api/pair`,
-//! `/api/auth/*`, `/api/user`, `/api/fs`, `/api/push/*`, and the
-//! `entity.*` ops namespace) still works end-to-end. Integrations
+//! `/api/auth/*`, `/api/user`, `/api/fs`, `/api/push/*`,
+//! `/api/entity-index`, `/api/pending-ops`, and the `entity.*` ops
+//! namespace) still works end-to-end. Integrations
 //! (peregrin's session plane, campaign planes, …) compose
 //! [`state`] themselves: build a [`HyphaState`], register their
 //! [`EntityPlane`]s via [`HyphaState::with_kind`], and hand it to

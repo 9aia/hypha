@@ -821,6 +821,9 @@ impl EntityApi for SyncEntityApi {
         Ok(token)
     }
 
+    // Substrate gap — `hypha-http` serves no `/api/config`; this only
+    // answers on integration nodes that mount their own config
+    // surface (see the `EntityApi::get_config` doc note).
     async fn get_config(&self) -> Result<BTreeMap<String, Value>, String> {
         let (_, client) = self.scoped_client(None)?;
         tokio::task::spawn_blocking(move || {
@@ -836,6 +839,8 @@ impl EntityApi for SyncEntityApi {
         .map_err(join_err)?
     }
 
+    // Same gap as `get_config` — no `/api/config/{key}` on the
+    // substrate node.
     async fn set_config(&self, key: &str, value: &Value) -> Result<(), String> {
         let (_, client) = self.scoped_client(None)?;
         let path = format!("/api/config/{}", hypha_sync::client::encode_segment(key));

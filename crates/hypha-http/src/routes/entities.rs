@@ -220,6 +220,47 @@ pub async fn snapshot_item(
     last.unwrap_or_else(not_found)
 }
 
+/// `GET /api/entity-index` — the single-node entity index: this
+/// node's id plus every registered plane's entity docs (`?kind=`
+/// filters, same as `GET /api/entities`). The hub's merged
+/// multi-node version is `hypha-hub`'s `entity_routes::entity_index`;
+/// both answer `{"index": [{node, entities}]}`.
+pub async fn entity_index(
+    State(state): State<HyphaState>,
+    method: Method,
+    req: Request<Body>,
+) -> Response {
+    if method != Method::GET {
+        return not_found();
+    }
+    let ctx = state.entity_context();
+    let query = req.uri().query();
+    let kind = query_param(query, "kind");
+    let mut entities = Vec::new();
+    for plane in ctx.kinds.planes() {
+        if kind.as_deref().is_some_and(|k| k != plane.kind()) {
+            continue;
+        }
+        entities.extend(plane.list(&ctx, query).await);
+    }
+    let node = state.node_identity().id;
+    json_response(
+        json!({ "index": [{ "node": node, "entities": entities }] }),
+        StatusCode::OK,
+    )
+}
+
+/// `GET /api/pending-ops` — the node's outbox view. A bare node owns
+/// no outbox (the durable queue lives hub-side in `hypha-hub`), so the
+/// honest answer is an empty list — same `{"ops": [...]}` shape the
+/// hub serves.
+pub async fn pending_ops(State(_state): State<HyphaState>, method: Method) -> Response {
+    if method != Method::GET {
+        return not_found();
+    }
+    json_response(json!({ "ops": [] }), StatusCode::OK)
+}
+
 /// `POST /api/entities/snapshot` — import a snapshot on this node;
 /// `body.kind` picks the plane (absent → the default plane).
 pub async fn snapshot_collection(

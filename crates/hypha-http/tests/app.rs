@@ -198,6 +198,53 @@ async fn entity_get_create_op_delete_flow() {
 }
 
 #[tokio::test]
+async fn entity_index_and_pending_ops_reads() {
+    let router = app(state());
+
+    // One-node index row — the node's own id + its planes' docs.
+    let res = router
+        .clone()
+        .oneshot(
+            Request::get("/api/entity-index")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let v = body_json(res).await;
+    let index = v["index"].as_array().unwrap();
+    assert_eq!(index.len(), 1);
+    assert_eq!(index[0]["entities"][0]["id"], "w1");
+    assert!(index[0]["node"].as_str().unwrap().starts_with("node_"));
+
+    // `?kind=` filters like `GET /api/entities`.
+    let res = router
+        .clone()
+        .oneshot(
+            Request::get("/api/entity-index?kind=other")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let v = body_json(res).await;
+    assert_eq!(v["index"][0]["entities"].as_array().unwrap().len(), 0);
+
+    // A bare node owns no outbox — empty ops, same shape as the hub.
+    let res = router
+        .oneshot(
+            Request::get("/api/pending-ops")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await, json!({ "ops": [] }));
+}
+
+#[tokio::test]
 async fn auth_gate_blocks_api_without_token_when_configured() {
     let router = app(state().with_token(Some("sekret".into())));
     let res = router

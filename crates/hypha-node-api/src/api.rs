@@ -38,19 +38,20 @@ pub trait EntityApi: Send + Sync + 'static {
     async fn submit_op(&self, id: &str, op: &EntityOp) -> Result<(), String>;
     /// `DELETE /api/entities/{id}`.
     async fn delete_entity(&self, id: &str) -> Result<(), String>;
-    /// `GET /api/entities/{id}/export` — the entity's snapshot bytes
+    /// `GET /api/entities/{id}/snapshot` — the entity's snapshot bytes
     /// (integration-defined IR).
     async fn snapshot_export(&self, id: &str) -> Result<Value, String>;
-    /// `POST /api/entities/import` — resume a snapshot on a node
+    /// `POST /api/entities/snapshot` — resume a snapshot on a node
     /// (`node` picks the target; `None` = primary).
     async fn snapshot_import(&self, body: &Value, node: Option<&str>) -> Result<EntityDto, String>;
 
     /* ---- index + outbox --------------------------------------------*/
-    /// `GET /api/index` — per-node entity indexes (the merged
+    /// `GET /api/entity-index` — per-node entity indexes (the merged
     /// projection on a hub, one row on a direct connection).
     async fn entity_index(&self) -> Result<Vec<EntityIndexDto>, String>;
-    /// Queued and dead-lettered ops in the hub's durable outbox.
-    /// Direct connections have no outbox and return `[]`.
+    /// `GET /api/pending-ops` — queued and dead-lettered ops in the
+    /// hub's durable outbox. A bare node has no outbox and answers
+    /// `{"ops": []}`.
     async fn pending_ops(&self) -> Result<Vec<PendingOpDto>, String>;
 
     /* ---- node-level (substrate-generic) ----------------------------*/
@@ -65,9 +66,15 @@ pub trait EntityApi: Send + Sync + 'static {
     /// `POST /api/pair` — redeem a one-time pairing code for a
     /// long-lived node credential (`{code}` → `{token}`).
     async fn pair(&self, code: &str, node: Option<&str>) -> Result<String, String>;
-    /// `GET /api/config` — the node's config document.
+    /// Node config surface — **substrate gap**: `hypha-http` serves no
+    /// `/api/config` route (config is integration-owned; a composing
+    /// integration mounts its own). Calls against a bare substrate
+    /// node 404; kept on the port for integrations that do serve it.
+    #[doc(hidden)]
     async fn get_config(&self) -> Result<BTreeMap<String, Value>, String>;
-    /// `PATCH /api/config/{key}` — `{value}` stored verbatim.
+    /// See [`EntityApi::get_config`] — same gap (`PATCH
+    /// /api/config/{key}` is not a substrate route).
+    #[doc(hidden)]
     async fn set_config(&self, key: &str, value: &Value) -> Result<(), String>;
     /// `GET /api/fs?path=` — direct subdirectories of an absolute
     /// path. `node` routes on a multi-node hub; `None` = primary.
@@ -303,7 +310,7 @@ impl EntityApi for HttpEntityApi {
         let id = id.to_string();
         tokio::task::spawn_blocking(move || {
             read_json(
-                api.get(&format!("/api/entities/{id}/export"))?,
+                api.get(&format!("/api/entities/{id}/snapshot"))?,
                 "snapshot export",
             )
         })
@@ -317,7 +324,7 @@ impl EntityApi for HttpEntityApi {
         let q = node_query(node);
         tokio::task::spawn_blocking(move || {
             read_json(
-                api.send_json("POST", &format!("/api/entities/import{q}"), &body)?,
+                api.send_json("POST", &format!("/api/entities/snapshot{q}"), &body)?,
                 "snapshot import",
             )
         })
@@ -331,10 +338,10 @@ impl EntityApi for HttpEntityApi {
             #[derive(serde::Deserialize)]
             struct IndexBody {
                 #[serde(default)]
-                nodes: Vec<EntityIndexDto>,
+                index: Vec<EntityIndexDto>,
             }
-            let body: IndexBody = read_json(api.get("/api/index")?, "entity index")?;
-            Ok(body.nodes)
+            let body: IndexBody = read_json(api.get("/api/entity-index")?, "entity index")?;
+            Ok(body.index)
         })
         .await
         .map_err(err_msg)?
@@ -346,10 +353,10 @@ impl EntityApi for HttpEntityApi {
             #[derive(serde::Deserialize)]
             struct OutboxBody {
                 #[serde(default)]
-                pending: Vec<PendingOpDto>,
+                ops: Vec<PendingOpDto>,
             }
-            let body: OutboxBody = read_json(api.get("/api/outbox")?, "pending ops")?;
-            Ok(body.pending)
+            let body: OutboxBody = read_json(api.get("/api/pending-ops")?, "pending ops")?;
+            Ok(body.ops)
         })
         .await
         .map_err(err_msg)?

@@ -147,8 +147,11 @@ struct PairingInner {
     hashes: Mutex<HashSet<String>>,
     /// Credential prefix minted on redeem — `hypha_` by default;
     /// integrations keep their historical prefix (peregrin's
-    /// `sepia_`) so existing tooling keeps matching.
-    token_prefix: std::sync::Arc<str>,
+    /// `sepia_`) so existing tooling keeps matching. `Mutex` so
+    /// [`Pairing::with_token_prefix`] also works on an already-shared
+    /// (cloned) instance — composition roots install the prefix after
+    /// the pairing has been handed to app state.
+    token_prefix: Mutex<std::sync::Arc<str>>,
 }
 
 impl Pairing {
@@ -172,7 +175,7 @@ impl Pairing {
                 tokens_file,
                 store: PairingStore::default(),
                 hashes: Mutex::new(hashes),
-                token_prefix: std::sync::Arc::from("hypha_"),
+                token_prefix: Mutex::new(std::sync::Arc::from("hypha_")),
             }),
         }
     }
@@ -185,22 +188,23 @@ impl Pairing {
                 tokens_file: PathBuf::new(),
                 store,
                 hashes: Mutex::new(HashSet::new()),
-                token_prefix: std::sync::Arc::from("hypha_"),
+                token_prefix: Mutex::new(std::sync::Arc::from("hypha_")),
             }),
         }
     }
 
     /// Rename the credential prefix `redeem` mints (default
     /// `hypha_`) — integrations whose wire contract names its own
-    /// prefix install it here. Issued credentials are hash-persisted,
+    /// prefix install it here, even after the `Pairing` has been
+    /// cloned into shared state. Issued credentials are hash-persisted,
     /// so already-issued tokens keep working either way.
     #[must_use]
-    pub fn with_token_prefix(mut self, prefix: impl Into<std::sync::Arc<str>>) -> Self {
-        // `Arc::get_mut` succeeds while this is the only strong ref —
-        // builder-time, before the pairing is shared.
-        if let Some(inner) = std::sync::Arc::get_mut(&mut self.inner) {
-            inner.token_prefix = prefix.into();
-        }
+    pub fn with_token_prefix(self, prefix: impl Into<std::sync::Arc<str>>) -> Self {
+        *self
+            .inner
+            .token_prefix
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = prefix.into();
         self
     }
 
@@ -254,7 +258,13 @@ impl Pairing {
         if !self.inner.store.redeem(code) {
             return None;
         }
-        let token = mint_pair_token_prefixed(&self.inner.token_prefix);
+        let token = mint_pair_token_prefixed(
+            &self
+                .inner
+                .token_prefix
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner),
+        );
         {
             let mut hashes = self
                 .inner

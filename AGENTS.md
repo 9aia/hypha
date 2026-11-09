@@ -58,9 +58,10 @@ pre-commit runs `cargo fmt --check`, pre-push `cargo xtask check`.
 ## The worktree anatomy
 
 `project/` is a git worktree of an orphan branch — the myco ledger,
-created by `myco init`. Gitignored on `main`; never commit its
-contents to `main`. `docs/` follows the same pattern when the docs
-site lands.
+created by `myco init`. `docs/` is the same pattern — the VitePress
+site (Diátaxis) deployed to GitHub Pages at `9aia.com/hypha` via
+`bun run docs:deploy` from the `docs/` worktree. Both are
+gitignored on `main`; never commit their contents to `main`.
 
 ## Rules
 
@@ -77,9 +78,10 @@ site lands.
 
 ## Docs
 
-`docs/` worktree — VitePress + Diátaxis when the site lands.
-Design history lives in peregrin's `project/adrs/` (ADR-0091 is the
-entity-plane contract); hypha's own ADRs will live in `project/adrs/`.
+`docs/` worktree — VitePress + Diátaxis → GitHub Pages at
+`9aia.com/hypha`. Design history lives in peregrin's
+`project/adrs/` (ADR-0091 is the entity-plane contract); hypha's own
+ADRs will live in `project/adrs/`.
 
 <!-- myco:agent-awareness -->
 

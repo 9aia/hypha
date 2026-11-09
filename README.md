@@ -50,5 +50,5 @@ cargo xtask test     # whole suite (nextest if present)
 cargo xtask coverage # llvm-cov report (HTML → target/llvm-cov/html)
 ```
 
-[CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md) ·
-[LICENSE](LICENSE) (MIT)
+[Docs](https://9aia.com/hypha/) · [CONTRIBUTING](CONTRIBUTING.md) ·
+[SECURITY](SECURITY.md) · [LICENSE](LICENSE) (MIT)

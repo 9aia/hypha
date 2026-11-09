@@ -78,6 +78,13 @@ pub trait EntityApi: Send + Sync + 'static {
     async fn push_subscribe(&self, subscription: &PushSubscriptionDto) -> Result<(), String>;
     /// `DELETE /api/push/subscribe` — `{endpoint}`.
     async fn push_unsubscribe(&self, endpoint: &str) -> Result<(), String>;
+
+    /// The entity kind a kind-less create defaults to — the first
+    /// registered kind on a policy-driven api, `None` when the backend
+    /// has no default (the node applies its own).
+    fn default_entity_kind(&self) -> Option<&'static str> {
+        None
+    }
 }
 
 /* ---- HTTP client ------------------------------------------------*/

@@ -1,0 +1,448 @@
+//! hypha-hub — the node-API gateway. Bridges client traffic to the
+//! node daemons and runs the multi-node sync engine:
+//!
+//! - `/api/events` — SSE bridge to `HYPHA_NODE_URL` (EventSource
+//!   can't carry cross-origin auth cleanly; proxying keeps the client
+//!   same-origin).
+//! - `/api/entities/{id}/stream` — per-entity live stream, routed to
+//!   the owning node and shaped by the kind's
+//!   [`hypha_sync::KindPolicy::stream_path`].
+//! - `/api/push/*` — the hub-owned push subscription store (one
+//!   subscription fans out to every paired node).
+//! - `/api/*` — generic passthrough for the rest of the node API,
+//!   entity-scoped calls routed to the owning node on multi-node
+//!   setups (`HYPHA_NODES`).
+//!
+//! [`sync_api::SyncEntityApi`] is the hub's [`EntityApi`]: entity
+//! lists read the merged projection and writes queue in the durable
+//! outbox when a node is down.
+//!
+//! The hub is **policy-injected**: [`kind_policies::default_kind_policies`]
+//! is an empty registry — integrations (peregrin's session plane,
+//! campaign planes, …) supply their [`hypha_sync::KindPolicies`] via
+//! [`hub_state_with`]/[`hub_state_from_with`]. A bare hub still
+//! gateways the whole substrate contract.
+
+pub mod auth;
+pub mod credentials;
+pub mod entity_routes;
+pub mod kind_policies;
+pub mod proxy;
+pub mod push_routes;
+pub mod sync_api;
+
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+use axum::Router;
+use axum::body::Body;
+use axum::extract::Request;
+use axum::middleware::{self, Next};
+use axum::response::Response;
+use axum::routing::{any, get};
+use hypha_node_api::api::EntityApi;
+use hypha_sync::KindPolicies;
+use tracing::Instrument;
+
+/// Everything the router needs — the node-API port (`EntityApi` is a
+/// trait so tests can stub it) and the upstream address for the
+/// HTTP/SSE bridges.
+/// Entity id → `(url, token)` of the owning node.
+pub type EntityRouter = Arc<dyn Fn(&str) -> Option<(String, Option<String>)> + Send + Sync>;
+
+/// Entity id → `(url, token, upstream path+query)` for the entity's
+/// live event stream — the kind policy's `stream_path` +
+/// `call_params` resolved against the owning node.
+pub type StreamRouter = Arc<dyn Fn(&str) -> Option<(String, Option<String>, String)> + Send + Sync>;
+
+#[derive(Clone)]
+pub struct HubState {
+    pub node: Arc<dyn EntityApi>,
+    pub node_url: Arc<str>,
+    pub node_token: Option<Arc<str>>,
+    /// Multi-node routing — resolves an entity id to its owning
+    /// node's `(url, token)` for entity-scoped proxy calls.
+    /// `None` → everything uses `node_url` (single-node mode).
+    pub entity_router: Option<EntityRouter>,
+    /// Live-stream routing — `(url, token, path)` per entity id.
+    /// `None` → `/api/entities/{id}/stream` 404s.
+    pub stream_router: Option<StreamRouter>,
+    /// Hub-owned push subscription store — `None` → `/api/push/*` 501s.
+    pub push: Option<Arc<hypha_push::PushStore>>,
+    /// `HYPHA_HUB_TOKEN` — the client→hub gate. `None` → every route
+    /// is open (loopback-only deployments).
+    pub hub_token: Option<Arc<str>>,
+    /// Long-lived streams: no global deadline and no body budget —
+    /// ureq's `recv_body` is a total deadline that fails every read
+    /// instantly once spent; a half-dead client is instead detected
+    /// when the next frame's `blocking_send` fails.
+    sse_agent: ureq::Agent,
+    /// Bounded request/response passthroughs.
+    http_agent: ureq::Agent,
+}
+
+impl HubState {
+    /// Build the state from parts. `node_url` is the node's origin
+    /// (`http://127.0.0.1:18787`); `node_token` is forwarded as a bearer
+    /// token on hub → node calls, falling back to the caller's own
+    /// `Authorization` header when unset.
+    pub fn new(
+        node: Arc<dyn EntityApi>,
+        node_url: impl Into<Arc<str>>,
+        node_token: Option<Arc<str>>,
+    ) -> Self {
+        let sse_agent = ureq::Agent::new_with_config(
+            ureq::Agent::config_builder()
+                .http_status_as_error(false)
+                .timeout_global(None)
+                .timeout_connect(Some(std::time::Duration::from_secs(10)))
+                .timeout_recv_body(None)
+                .build(),
+        );
+        let http_agent = ureq::Agent::new_with_config(
+            ureq::Agent::config_builder()
+                .http_status_as_error(false)
+                .timeout_global(Some(std::time::Duration::from_secs(60)))
+                .build(),
+        );
+        Self {
+            node,
+            node_url: node_url.into(),
+            node_token,
+            entity_router: None,
+            stream_router: None,
+            push: None,
+            hub_token: None,
+            sse_agent,
+            http_agent,
+        }
+    }
+
+    /// Agent configured for open-ended SSE reads.
+    pub(crate) fn sse_agent(&self) -> ureq::Agent {
+        self.sse_agent.clone()
+    }
+
+    /// Agent configured for bounded JSON calls.
+    pub(crate) fn json_agent(&self) -> ureq::Agent {
+        self.http_agent.clone()
+    }
+}
+
+/// Runtime configuration, all `HYPHA_*` env.
+#[derive(Clone, Debug)]
+pub struct HubConfig {
+    /// `HYPHA_HUB_HOST` — default `127.0.0.1`.
+    pub host: String,
+    /// `HYPHA_HUB_PORT` — default `13000`.
+    pub port: u16,
+    /// `HYPHA_NODE_URL` — default `http://127.0.0.1:18787`.
+    pub node_url: String,
+    /// `HYPHA_NODE_TOKEN` — bearer token forwarded hub → node.
+    pub node_token: Option<String>,
+    /// `HYPHA_HUB_TOKEN` — client→hub auth; required on non-loopback
+    /// binds, honored as bearer header or `?token=` query.
+    pub hub_token: Option<String>,
+}
+
+impl Default for HubConfig {
+    fn default() -> Self {
+        Self {
+            host: "127.0.0.1".into(),
+            port: 13000,
+            node_url: "http://127.0.0.1:18787".into(),
+            node_token: None,
+            hub_token: None,
+        }
+    }
+}
+
+/// Loopback binds may serve tokenless; anything else requires
+/// `HYPHA_HUB_TOKEN` (mirrors `hypha_http::env::is_loopback_host`).
+fn is_loopback_host(host: &str) -> bool {
+    hypha_http::env::is_loopback_host(host)
+}
+
+impl HubConfig {
+    /// Parse from env. `Err` on a malformed port/address or a
+    /// non-loopback bind without `HYPHA_HUB_TOKEN` — fail fast.
+    pub fn from_env() -> Result<Self, String> {
+        Self::from_lookup(|k| std::env::var(k).ok())
+    }
+
+    /// Test seam — parse from a key/value map instead of `std::env`.
+    pub fn from_map(vars: &HashMap<String, String>) -> Result<Self, String> {
+        Self::from_lookup(|key| vars.get(key).cloned())
+    }
+
+    /// Shared parser behind [`from_env`](Self::from_env).
+    pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> Result<Self, String> {
+        let mut cfg = Self::default();
+        if let Some(v) = get("HYPHA_HUB_HOST") {
+            cfg.host = v;
+        }
+        if let Some(v) = get("HYPHA_HUB_PORT").or_else(|| get("HYPHA_PORT")) {
+            cfg.port = v.parse::<u16>().map_err(|_| {
+                format!("HYPHA_HUB_PORT/HYPHA_PORT must be a port number, got {v:?}")
+            })?;
+        }
+        if let Some(v) = get("HYPHA_NODE_URL") {
+            cfg.node_url = v.trim_end_matches('/').to_string();
+        }
+        cfg.node_token = get("HYPHA_NODE_TOKEN").filter(|t| !t.is_empty());
+        cfg.hub_token = get("HYPHA_HUB_TOKEN").filter(|t| !t.is_empty());
+        // The node's bind guard, applied to the client surface: a
+        // wildcard/LAN bind with no hub token would expose the API.
+        if !is_loopback_host(&cfg.host) && cfg.hub_token.is_none() {
+            return Err(format!(
+                "hypha-hub refuses to bind {} without HYPHA_HUB_TOKEN. Set HYPHA_HUB_TOKEN or bind a loopback address (HYPHA_HUB_HOST=127.0.0.1).",
+                cfg.host
+            ));
+        }
+        Ok(cfg)
+    }
+
+    pub fn socket_addr(&self) -> Result<SocketAddr, String> {
+        format!("{}:{}", self.host, self.port)
+            .parse()
+            .map_err(|_| format!("invalid hub address {}:{}", self.host, self.port))
+    }
+}
+
+/// Build the axum router. `HubConfig` → `HubState` happens in
+/// [`hub_state`]; tests construct `HubState` directly with a stub
+/// `EntityApi`.
+pub fn router(state: HubState) -> Router {
+    Router::new()
+        // The merged entity surface — substrate reads hit the
+        // projection, ops ride the outbox. Must be registered before
+        // the `/api/*` passthrough so they win over single-node routing.
+        // The `export`/`import`/`index`/`outbox` spellings are aliases
+        // for the same handlers — `hypha-node-api`'s `HttpEntityApi`
+        // speaks them.
+        .route("/api/entities", any(entity_routes::collection))
+        .route(
+            "/api/entities/snapshot",
+            any(entity_routes::snapshot_collection),
+        )
+        .route(
+            "/api/entities/import",
+            any(entity_routes::snapshot_collection),
+        )
+        .route("/api/entities/{id}", any(entity_routes::item))
+        .route("/api/entities/{id}/ops", any(entity_routes::ops))
+        .route(
+            "/api/entities/{id}/snapshot",
+            any(entity_routes::snapshot_item),
+        )
+        .route(
+            "/api/entities/{id}/export",
+            any(entity_routes::snapshot_item),
+        )
+        .route("/api/entity-index", get(entity_routes::entity_index))
+        .route("/api/index", get(entity_routes::entity_index))
+        .route("/api/pending-ops", get(entity_routes::pending_ops))
+        .route("/api/outbox", get(entity_routes::pending_ops))
+        // SSE bridges — must be registered before the `/api/*` wildcard.
+        .route("/api/events", get(proxy::sse_events))
+        .route("/api/entities/{id}/stream", get(proxy::sse_entity_stream))
+        // Hub-owned push — intercepted before the passthrough so every
+        // node notifies through one subscription store.
+        .route("/api/push/vapid", any(push_routes::vapid))
+        .route("/api/push/subscribe", any(push_routes::subscribe))
+        .route("/api/{*rest}", any(proxy::passthrough))
+        // Hard ceiling for *every* request body. Sized at the
+        // passthrough cap so legit node-bound bodies never hit it.
+        .layer(tower_http::limit::RequestBodyLimitLayer::new(
+            proxy::MAX_PROXY_BODY,
+        ))
+        // Client gate — a no-op until `hub_token` is set.
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::auth_gate,
+        ))
+        // OTEL server span — outermost: client→hub requests get an
+        // `http_request` span the proxy's `traceparent` injection links
+        // hub→node calls into. Inert when export is off.
+        .layer(middleware::from_fn(trace_layer))
+        .with_state(state)
+}
+
+/// OTEL server span — extracts any inbound `traceparent` (federated
+/// callers), records the response status onto the span.
+async fn trace_layer(req: Request<Body>, next: Next) -> Response {
+    let span = hypha_telemetry::server_span(req.method(), req.uri().path(), req.headers());
+    let for_status = span.clone();
+    async move {
+        let res = next.run(req).await;
+        hypha_telemetry::record_response(&for_status, res.status().as_u16());
+        res
+    }
+    .instrument(span)
+    .await
+}
+
+/// HubState for a running hub: the sync engine + [`SyncEntityApi`].
+/// `HYPHA_NODES` (`id=url[@token];…`) wins; `HYPHA_NODE_URL`/`HYPHA_NODE_TOKEN`
+/// is the single-node shorthand. Nodes listed without a token resolve
+/// one from the [`credentials`] store (OS keyring → file fallback —
+/// that store is also where the pair flow persists minted tokens), and
+/// an env-provided token seeds an empty store slot so the plaintext
+/// can leave the env. The projection + outbox live under
+/// `$HYPHA_HOME/hub/` so they survive restarts.
+///
+/// Boots with [`kind_policies::default_kind_policies`] — the empty
+/// registry. Integrations inject theirs via [`hub_state_with`].
+///
+/// # Errors
+/// `String` on a missing/empty node list or a projection/outbox open failure.
+pub fn hub_state(config: &HubConfig) -> Result<HubState, String> {
+    hub_state_with(config, kind_policies::default_kind_policies())
+}
+
+/// [`hub_state`] with an integration-supplied kind-policy registry —
+/// the P4 composition seam. The same registry feeds the sync engine
+/// (diff projection, op params), the feed hook (push rules), and the
+/// entity API (gating, creates, actors, stream paths).
+///
+/// # Errors
+/// See [`hub_state`].
+pub fn hub_state_with(config: &HubConfig, policies: KindPolicies) -> Result<HubState, String> {
+    hub_state_from_with(|k| std::env::var_os(k), config, policies)
+}
+
+/// [`hub_state`] with the environment injected — the test seam that
+/// drives every env arm (`HYPHA_HOME`/`HOME`/`HYPHA_NODES`)
+/// without touching the process env.
+#[doc(hidden)]
+pub fn hub_state_from(
+    get: impl Fn(&str) -> Option<std::ffi::OsString>,
+    config: &HubConfig,
+) -> Result<HubState, String> {
+    hub_state_from_with(get, config, kind_policies::default_kind_policies())
+}
+
+/// [`hub_state_with`] with the environment injected — the full test
+/// seam (env map + policy registry).
+#[doc(hidden)]
+pub fn hub_state_from_with(
+    get: impl Fn(&str) -> Option<std::ffi::OsString>,
+    config: &HubConfig,
+    policies: KindPolicies,
+) -> Result<HubState, String> {
+    let home = get("HYPHA_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| get("HOME").map(|h| std::path::PathBuf::from(h).join(".local/share/hypha")))
+        .unwrap_or_else(|| std::path::PathBuf::from(".hypha"))
+        .join("hub");
+    std::fs::create_dir_all(&home).map_err(|e| format!("create {}: {e}", home.display()))?;
+    let creds = credentials::open(&home);
+    let mut nodes = get("HYPHA_NODES")
+        .and_then(|v| v.into_string().ok())
+        .filter(|v| !v.trim().is_empty())
+        .map(|raw| sync_api::parse_nodes(&raw))
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| {
+            vec![sync_api::HubNode {
+                id: "node".to_string(),
+                url: config.node_url.clone(),
+                token: config.node_token.clone(),
+            }]
+        });
+    // Env tokens are explicit config — they win, and seed an empty
+    // store slot so the plaintext can leave the env. Tokenless nodes
+    // resolve a stored credential.
+    let (stored, seeded) = sync_api::resolve_node_tokens(&mut nodes, creds.as_ref());
+    // Hoisted — `tracing` fields evaluate only when a subscriber is
+    // attached, which coverage runs don't guarantee.
+    let backend = creds.backend();
+    tracing::info!(backend, stored, seeded, "node credential store");
+    let projection = hypha_sync::ProjectionStore::open(&home.join("projection.db"))
+        .map_err(|e| format!("projection open: {e}"))?
+        .with_kind_policies(policies.clone());
+    // Rows from node ids no longer configured (renamed, removed, or the
+    // legacy `node` shorthand) have no sync loop — purge them once at
+    // boot so dead entities stop surfacing in the index.
+    let keep: Vec<String> = nodes.iter().map(|n| n.id.clone()).collect();
+    if let Err(e) = projection.purge_unregistered(&keep) {
+        tracing::warn!("purge_unregistered failed: {e}");
+    }
+    let outbox = hypha_outbox::Outbox::open(&home.join("outbox.db")).map_err(|e| e.to_string())?;
+    let targets = nodes.iter().map(|n| {
+        let node = hypha_sync::NodeRef {
+            id: n.id.clone(),
+            url: n.url.clone(),
+            label: n.id.clone(),
+        };
+        match &n.token {
+            Some(t) => hypha_sync::engine::NodeTarget::with_token(node, t.clone()),
+            None => hypha_sync::engine::NodeTarget::new(node),
+        }
+    });
+    let push = Arc::new(hypha_push::PushStore::open(hypha_push::JsonDocStore::open(
+        &home.join("push.json"),
+    )));
+    // One registry, three consumers: the sync engine (diffs, op
+    // params), the feed hook (push rules), and the entity API (gating,
+    // creates, actors, stream paths).
+    let options = hypha_sync::engine::SyncOptions {
+        on_event: Some(feed_hook(projection.clone(), Arc::clone(&push), &policies)),
+        policies: policies.clone(),
+        ..hypha_sync::engine::SyncOptions::default()
+    };
+    let engine = hypha_sync::SyncEngine::spawn(projection, outbox, targets, options);
+    // `unwrap_or_else` above guarantees at least the single-node row.
+    let upstream = nodes.first().cloned().unwrap_or_default();
+    let api = Arc::new(
+        sync_api::SyncEntityApi::new(engine, nodes, creds).with_policies(policies.clone()),
+    );
+    let mut state = HubState::new(
+        Arc::clone(&api) as Arc<dyn EntityApi>,
+        upstream.url.as_str(),
+        upstream.token.clone().map(Into::into),
+    );
+    state.push = Some(push);
+    state.hub_token = config.hub_token.clone().map(Into::into);
+    let router_api = Arc::clone(&api);
+    state.entity_router = Some(Arc::new(move |id| router_api.node_url_for(id, None)));
+    let stream_api = Arc::clone(&api);
+    state.stream_router = Some(Arc::new(move |id| stream_api.stream_upstream(id)));
+    Ok(state)
+}
+
+/// The hub's push-notification feed hook — a diff event a kind
+/// policy claims produces that kind's [`hypha_sync::Notice`]s,
+/// delivered as Web Push. Which events notify and what they say is
+/// the policy's call; this body is the generic dispatch. Extracted so
+/// tests can drive it directly (the live hook only fires on real
+/// node feeds).
+#[doc(hidden)]
+pub fn feed_hook(
+    projection: hypha_sync::ProjectionStore,
+    push: Arc<hypha_push::PushStore>,
+    policies: &KindPolicies,
+) -> hypha_sync::engine::FeedHook {
+    let policies = policies.clone();
+    Arc::new(
+        move |node_id: &str, event: &hypha_sync::client::FeedEvent| {
+            let hypha_sync::client::FeedEvent::Diff {
+                kind, id, patch, ..
+            } = event
+            else {
+                return;
+            };
+            let Some(policy) = policies.for_diff_event(kind) else {
+                return;
+            };
+            let row = projection.entity(node_id, id).ok().flatten();
+            for notice in policy.notices(kind, id, row.as_ref(), patch) {
+                let kind = match notice.kind {
+                    hypha_sync::NoticeKind::Done => hypha_push::Kind::Done,
+                    hypha_sync::NoticeKind::Permission => hypha_push::Kind::Permission,
+                };
+                push.send(kind, &notice.title, &notice.body, &notice.url);
+            }
+        },
+    )
+}

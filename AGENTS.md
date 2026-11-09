@@ -8,10 +8,9 @@ network — the connective layer between nodes and workloads.
 ## Layout
 
 Ports-and-adapters. Crates are named `hypha-<port>` (trait) and
-`hypha-<port>-<impl>` (adapter); the composition roots
-(`hypha serve` node host, `hypha-hub` gateway) land with the
-`hypha-http`/`hypha-node` split (migration plan PL-005 in the org
-ledger).
+`hypha-<port>-<impl>` (adapter); the composition roots are
+`hypha-node` (the `hypha` node-host binary + `serve` library) and
+`hypha-hub` (the `hypha-hub` aggregation-gateway binary + library).
 
 | Crate | Role |
 | --- | --- |
@@ -20,6 +19,8 @@ ledger).
 | `crates/hypha-sync` | hub-side sync — SQLite entity-index projection + per-node sync engine over `hypha-outbox` (ex-`peregrin-sync`) |
 | `crates/hypha-push` | Web Push notifications over a JSON document store — VAPID keys, subscription prefs, 404/410 prune (ex-`peregrin-push`, sepia-free) |
 | `crates/hypha-http` | substrate HTTP surface (ex-`peregrin-http` split) — `app(HyphaState)` axum router: `/api/entities*` kind planes, `/api/events` feed, node/pairing/auth, `/api/push/*`; kind-agnostic, integrations nest their routes |
+| `crates/hypha-node` | node host library — `Env` → `HyphaState` → `hypha_http::app`; integrations register planes via `HyphaState::with_kind`, then `serve_state`. Ships the `hypha` bin (`hypha serve`, zero kinds) |
+| `crates/hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi` over the sync engine, merged `/api/entities*` surface, SSE/passthrough proxies, push store, node credentials (keyring→file). Policy-injected: boots an empty `KindPolicies`, integrations supply theirs via `hub_state_with`/`hub_state_from_with`. Ships the `hypha-hub` bin |
 | `crates/hypha-control` | pure arbitration policy — lock registry, takeover, merge/route (`pick_owner`) |
 | `crates/hypha-telemetry` | opt-in OTEL layer over `tracing` (OTLP export, W3C propagation) |
 | `crates/hypha-secret` + `-keyring`/`-dotenv` | secrets port + OS-keyring and dotenv impls |
@@ -28,8 +29,7 @@ ledger).
 
 Landed from peregrin's entity plane (PL-005); `hypha-http` carries
 the substrate half of `peregrin-http` (session routes stay in
-peregrin until P4). `hypha-hub` and the `hypha`/`hypha-hub`
-binaries are phases P3–P4.
+peregrin until P4). `hypha-hub`/`hypha-node` + both binaries are P3c.
 
 ## Boundary
 

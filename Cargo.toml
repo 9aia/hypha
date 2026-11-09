@@ -1,0 +1,119 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/hypha-control",
+    "crates/hypha-dotenv",
+    "crates/hypha-keyring",
+    "crates/hypha-node-api",
+    "crates/hypha-outbox",
+    "crates/hypha-secret",
+    "crates/hypha-service",
+    "crates/hypha-systemd",
+    "crates/hypha-telemetry",
+    "xtask",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/9aia/hypha"
+
+[workspace.dependencies]
+# Internal crates.
+hypha-control = { path = "crates/hypha-control" }
+hypha-dotenv = { path = "crates/hypha-dotenv" }
+hypha-keyring = { path = "crates/hypha-keyring" }
+hypha-node-api = { path = "crates/hypha-node-api" }
+hypha-outbox = { path = "crates/hypha-outbox" }
+hypha-secret = { path = "crates/hypha-secret" }
+hypha-service = { path = "crates/hypha-service" }
+hypha-systemd = { path = "crates/hypha-systemd" }
+hypha-telemetry = { path = "crates/hypha-telemetry" }
+
+# External dependencies — pin conservative majors/minors.
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "2.0"
+async-trait = "0.1"
+tokio = { version = "1", features = [
+  "signal",
+  "macros",
+  "rt-multi-thread",
+  "process",
+  "io-util",
+  "io-std",
+  "sync",
+  "time",
+  "fs",
+] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+rusqlite = { version = "0.32" }
+ureq = { version = "3", features = ["json"] }
+time = { version = "0.3", features = ["formatting"] }
+tempfile = "3"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+# `cfg(coverage)` is set by cargo-llvm-cov's rustc wrapper; probes for
+# host-untestable paths gate on it.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage)"] }
+
+[workspace.lints.clippy]
+# Hard gates: deny classes that hide real bugs.
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+# Warn-level signal, fixed as we go.
+style = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+# Pedantic lints that cost more than they catch here.
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+module_name_repetitions = "allow"
+doc_markdown = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+expl_impl_clone_on_copy = "allow"
+cast_lossless = "allow"
+struct_excessive_bools = "allow"
+
+[profile.dev]
+# Line tables only: backtraces still symbolize, but test-binary links
+# and disk usage drop sharply (full-debuginfo target/ was 25 GB).
+debug = "line-tables-only"
+incremental = false # this dep tree makes incremental dirs multi-GB
+
+
+[profile.dev.package."*"]
+debug = false # dependencies don't need debuginfo
+
+[profile.test]
+debug = "line-tables-only"
+incremental = false
+
+
+[profile.test.package."*"]
+debug = false
+
+[profile.release]
+# Thin LTO for local `cargo xtask install` —
+# shipped binaries go through `cargo build --profile dist`.
+lto = "thin"
+strip = true
+panic = "unwind" # keep unwind: tests + tokio supervise panics
+
+[profile.dist]
+# What we ship: maximum optimization, one codegen unit.
+inherits = "release"
+lto = "fat"
+codegen-units = 1

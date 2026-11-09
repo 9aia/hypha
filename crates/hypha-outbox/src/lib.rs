@@ -144,6 +144,7 @@ impl Outbox {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "busy_timeout", 5000)?;
         conn.execute_batch(SCHEMA)?;
+        migrate_legacy_schema(&conn)?;
         Ok(Self {
             conn: std::sync::Arc::new(std::sync::Mutex::new(conn)),
         })
@@ -403,6 +404,21 @@ struct Envelope<'a> {
     payload: &'a Value,
 }
 
+/// Pre-hypha peregrin outboxes keyed rows by `session_id`; the generic
+/// schema uses `entity_id`. `CREATE TABLE IF NOT EXISTS` leaves the
+/// old table in place, so rename the column in place — sqlite
+/// rewrites the `outbox_pending` index to match.
+fn migrate_legacy_schema(conn: &Connection) -> Result<(), OutboxError> {
+    let mut stmt = conn.prepare("SELECT name FROM pragma_table_info('outbox')")?;
+    let names: Vec<String> = stmt
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<_, _>>()?;
+    if names.iter().any(|n| n == "session_id") && !names.iter().any(|n| n == "entity_id") {
+        conn.execute_batch("ALTER TABLE outbox RENAME COLUMN session_id TO entity_id")?;
+    }
+    Ok(())
+}
+
 fn next_seq_locked(conn: &Connection, node_id: &str, entity_id: &str) -> Result<i64, OutboxError> {
     let seq: i64 = conn.query_row(
         "SELECT COALESCE(MAX(seq),0)+1 FROM outbox WHERE node_id=? AND entity_id=?",
@@ -485,6 +501,49 @@ mod cov_tests {
             "peek's expire sweep should fail on a locked db"
         );
         drop(blocker);
+    }
+
+    #[test]
+    fn legacy_session_id_schema_migrates() {
+        // Pre-hypha peregrin outbox: `session_id` column + index.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("o.db");
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE outbox (
+                    id TEXT PRIMARY KEY,
+                    node_id TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    op TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL UNIQUE,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    max_attempts INTEGER NOT NULL DEFAULT 5,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT,
+                    last_error TEXT,
+                    seq INTEGER NOT NULL
+                );
+                CREATE INDEX outbox_pending
+                    ON outbox (node_id, session_id, seq) WHERE status = 'pending';",
+            )
+            .unwrap();
+        }
+        let outbox = Outbox::open(&path).unwrap();
+        outbox
+            .enqueue(
+                "n1",
+                "e1",
+                "op",
+                OpKind::Turn,
+                serde_json::json!(1),
+                "k",
+                None,
+            )
+            .unwrap();
+        assert!(outbox.peek("n1", "e1").unwrap().is_some());
     }
 
     #[test]

@@ -15,7 +15,8 @@ Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
 | `hypha-dotenv` | dotenv-file impl | landed |
 | `hypha-service` | service-install port | landed |
 | `hypha-systemd` | systemd unit render/install impl | landed |
-| `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | P2 |
+| `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | landed |
+| `hypha-push` | Web Push over a JSON doc store — VAPID, subscriptions, 404/410 prune (ex-`peregrin-push`) | landed |
 | `hypha-http` | substrate HTTP surface + node host (ex-`peregrin-http` split) | P3 |
 | `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) | P3 |
 | `hypha` / `hypha-hub` bins | `hypha serve` node host, hub binary | P3 |

@@ -31,13 +31,17 @@ fn token_matches(provided: &str, expected: &str) -> bool {
         == 0
 }
 
-/// Read the auth cookie — `hypha_token=<credential>` — from a request.
-fn cookie_token(req: &Request) -> Option<String> {
+/// Read the auth cookie — `<name>=<credential>` — from a request.
+/// `name` is [`crate::HyphaState::auth_cookie`] (`hypha_token` by
+/// default; integrations keep their historical name).
+fn cookie_token(req: &Request, name: &str) -> Option<String> {
     let cookie = req.headers().get(header::COOKIE)?.to_str().ok()?;
     for part in cookie.split(';') {
         let part = part.trim_start();
-        if let Some(value) = part.strip_prefix("hypha_token=") {
-            return Some(percent_decode(value));
+        if let Some(value) = part.strip_prefix(name) {
+            if let Some(value) = value.strip_prefix('=') {
+                return Some(percent_decode(value));
+            }
         }
     }
     None
@@ -106,7 +110,7 @@ fn is_authorized(state: &HyphaState, req: &Request) -> bool {
     // HttpOnly-cookie auth (POST /api/auth/login): the same credential,
     // held outside JS reach — Bearer stays authoritative when both ride.
     if provided.is_none() {
-        provided = cookie_token(req);
+        provided = cookie_token(req, &state.auth_cookie);
     }
     if provided.is_none() && req.method() == Method::GET && is_query_token_path(req.uri().path()) {
         provided = crate::routes::query_param(req.uri().query(), "access_token");
@@ -264,19 +268,19 @@ pub async fn handle(State(state): State<HyphaState>, req: Request<Body>) -> Resp
         }
         let secure = if https { "; Secure" } else { "" };
         let res = json_response(serde_json::json!({ "ok": true }), StatusCode::OK);
-        return with_set_cookie(res, &provided, secure);
+        return with_set_cookie(res, &state.auth_cookie, &provided, secure);
     }
     if req.method() == Method::POST && path == "/api/auth/logout" {
         let res = json_response(serde_json::json!({ "ok": true }), StatusCode::OK);
-        return with_expired_cookie(res);
+        return with_expired_cookie(res, &state.auth_cookie);
     }
     crate::routes::not_found()
 }
 
-fn with_set_cookie(res: Response, token: &str, secure: &str) -> Response {
+fn with_set_cookie(res: Response, name: &str, token: &str, secure: &str) -> Response {
     let mut res = res;
     let value = format!(
-        "{AUTH_COOKIE}={}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000{secure}",
+        "{name}={}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000{secure}",
         form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()
     );
     if let Ok(v) = HeaderValue::from_str(&value) {
@@ -285,12 +289,12 @@ fn with_set_cookie(res: Response, token: &str, secure: &str) -> Response {
     res
 }
 
-fn with_expired_cookie(res: Response) -> Response {
+fn with_expired_cookie(res: Response, name: &str) -> Response {
     let mut res = res;
-    res.headers_mut().insert(
-        header::SET_COOKIE,
-        HeaderValue::from_static("hypha_token=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"),
-    );
+    let value = format!("{name}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0");
+    if let Ok(v) = HeaderValue::from_str(&value) {
+        res.headers_mut().insert(header::SET_COOKIE, v);
+    }
     res
 }
 
@@ -310,10 +314,15 @@ mod cov_tests {
     fn cookie_and_percent_decode_arms() {
         // No header / no hypha_token / hit.
         assert_eq!(
-            cookie_token(&req_with_cookie("other=1; hypha_token=a%20b")).as_deref(),
+            cookie_token(&req_with_cookie("other=1; hypha_token=a%20b"), AUTH_COOKIE).as_deref(),
             Some("a b")
         );
-        assert_eq!(cookie_token(&req_with_cookie("other=1")), None);
+        assert_eq!(cookie_token(&req_with_cookie("other=1"), AUTH_COOKIE), None);
+        // A renamed cookie reads under its own name only.
+        assert_eq!(
+            cookie_token(&req_with_cookie("sepia_token=z"), "sepia_token").as_deref(),
+            Some("z")
+        );
         // percent_decode: uppercase hex, bad hex, lone %, '+', short tail.
         assert_eq!(percent_decode("%41"), "A");
         assert_eq!(percent_decode("%4z%5"), "%4z%5");

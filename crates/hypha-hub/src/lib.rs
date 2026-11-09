@@ -337,7 +337,10 @@ pub fn hub_state_from_with(
         .unwrap_or_else(|| std::path::PathBuf::from(".hypha"))
         .join("hub");
     std::fs::create_dir_all(&home).map_err(|e| format!("create {}: {e}", home.display()))?;
-    let creds = credentials::open(&home);
+    // Credential-store selection (`HYPHA_CREDENTIAL_STORE`) rides the
+    // same injected env as the node list — integrations mapping their
+    // own env names (peregrin's `PEREGRIN_*`) get it for free.
+    let creds = credentials::from_lookup(&home, |k| get(k).and_then(|v| v.into_string().ok()));
     let mut nodes = get("HYPHA_NODES")
         .and_then(|v| v.into_string().ok())
         .filter(|v| !v.trim().is_empty())

@@ -16,6 +16,7 @@ pub mod pair;
 pub mod ratelimit;
 pub mod routes;
 
+use std::any::Any;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -39,6 +40,14 @@ pub use node::{
 pub use pair::{Pairing, PairingStore};
 pub use ratelimit::{Quota, RateLimiter};
 
+/// Async agent-inventory provider behind `GET /api/node`'s `agents`
+/// field — integrations whose roster is a live query (e.g. a session
+/// plane's `list_agents`) install one via
+/// [`HyphaState::with_agent_lister`]. When unset the static
+/// [`HyphaState::node_agents`] list is reported.
+pub type AgentLister =
+    Arc<dyn Fn() -> futures::future::BoxFuture<'static, Vec<String>> + Send + Sync>;
+
 /// Shared state threaded through every substrate handler — the
 /// `createApp` options object minus everything an integration owns
 /// (session planes, meta stores, campaign state). `Clone` is cheap
@@ -59,8 +68,28 @@ pub struct HyphaState {
     pub node_path: Option<PathBuf>,
     /// Agent ids advertised by `GET /api/node` — the integration's
     /// runtime inventory (empty on a bare substrate; peregrin fills it
-    /// from its session plane).
+    /// from its session plane). Static fallback: a live
+    /// [`Self::agent_lister`] wins when installed.
     pub node_agents: Vec<String>,
+    /// Live agent-inventory provider for `GET /api/node` — see
+    /// [`AgentLister`]. `None` → `node_agents` is reported verbatim.
+    pub agent_lister: Option<AgentLister>,
+    /// Full `capabilities` override for `GET /api/node` — integrations
+    /// whose wire contract names its own capability tags (peregrin's
+    /// `sessions`/`projects`/`import`) install the exact list; `None`
+    /// → the substrate computes `entities`/`events`/`export` plus
+    /// `push`/`pairing` when those backends are wired.
+    pub node_capabilities: Option<Vec<String>>,
+    /// Opaque payload the [`EntityContext`] handed to every
+    /// [`EntityPlane`] carries as `host` — integrations whose planes
+    /// wrap host handlers (peregrin's session plane downcasts it back
+    /// to `AppState`) install their own state via
+    /// [`Self::with_entity_host`]. `None` → the `HyphaState` itself.
+    pub entity_host: Option<Arc<dyn Any + Send + Sync>>,
+    /// Auth-cookie name the login/logout exchange sets and the gate
+    /// reads — `hypha_token` on a bare substrate; integrations keep
+    /// their historical name (peregrin serves `sepia_token`).
+    pub auth_cookie: Arc<str>,
     /// Pairing backend for `POST /api/pair` + issued-credential auth.
     pub pairing: Option<Pairing>,
     /// Per-client-IP throttle on `POST /api/pair` — the one route that
@@ -93,6 +122,10 @@ impl HyphaState {
             })),
             node_path: None,
             node_agents: Vec::new(),
+            agent_lister: None,
+            node_capabilities: None,
+            entity_host: None,
+            auth_cookie: Arc::from(auth::AUTH_COOKIE),
             pairing: None,
             pair_limit: RateLimiter::pair(
                 env::DEFAULT_PAIR_LIMIT_PER_MIN,
@@ -121,6 +154,10 @@ impl HyphaState {
             ))),
             node_path: Some(env.node_path.clone()),
             node_agents: Vec::new(),
+            agent_lister: None,
+            node_capabilities: None,
+            entity_host: None,
+            auth_cookie: Arc::from(auth::AUTH_COOKIE),
             pairing: Some(Pairing::open(
                 env.pair_code_path.clone(),
                 env.tokens_path.clone(),
@@ -136,11 +173,15 @@ impl HyphaState {
     }
 
     /// The [`EntityContext`] the `/api/entities*` surface hands to
-    /// every [`EntityPlane`] — the kind registry plus this
-    /// `HyphaState` as the opaque host payload (integrations downcast
-    /// it back to reach their own state).
+    /// every [`EntityPlane`] — the kind registry plus the host payload:
+    /// [`Self::entity_host`] when an integration installed one (planes
+    /// downcast it back to their own state), else this `HyphaState`.
     pub fn entity_context(&self) -> EntityContext {
-        EntityContext::new(self.kinds.clone(), Arc::new(self.clone()))
+        let host = self
+            .entity_host
+            .clone()
+            .unwrap_or_else(|| Arc::new(self.clone()));
+        EntityContext::new(self.kinds.clone(), host)
     }
 
     /// Register an entity kind plane behind `/api/entities*` — the
@@ -156,6 +197,40 @@ impl HyphaState {
     #[must_use]
     pub fn with_agents(mut self, agents: Vec<String>) -> Self {
         self.node_agents = agents;
+        self
+    }
+
+    /// Install a live agent-inventory provider — wins over the static
+    /// [`Self::node_agents`] list on `GET /api/node`.
+    #[must_use]
+    pub fn with_agent_lister(mut self, lister: AgentLister) -> Self {
+        self.agent_lister = Some(lister);
+        self
+    }
+
+    /// Override the `capabilities` list `GET /api/node` reports —
+    /// integrations whose wire contract names its own tags install the
+    /// exact list (computed per-request state like `push`/`pairing`
+    /// is the caller's job).
+    #[must_use]
+    pub fn with_node_capabilities(mut self, capabilities: Vec<String>) -> Self {
+        self.node_capabilities = Some(capabilities);
+        self
+    }
+
+    /// Install the opaque [`EntityContext::host`] payload planes
+    /// downcast — e.g. an integration's own app state.
+    #[must_use]
+    pub fn with_entity_host(mut self, host: Arc<dyn Any + Send + Sync>) -> Self {
+        self.entity_host = Some(host);
+        self
+    }
+
+    /// Rename the auth cookie the login/logout exchange sets and the
+    /// gate reads (default `hypha_token`).
+    #[must_use]
+    pub fn with_auth_cookie(mut self, name: impl Into<Arc<str>>) -> Self {
+        self.auth_cookie = name.into();
         self
     }
 

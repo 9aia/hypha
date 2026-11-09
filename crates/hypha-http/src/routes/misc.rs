@@ -151,34 +151,47 @@ pub async fn user(
 /// plus `push`/`pairing` when those backends are wired.
 pub async fn node(State(state): State<HyphaState>, method: Method, req: Request<Body>) -> Response {
     match method {
-        Method::GET => node_get(&state),
+        Method::GET => node_get(&state).await,
         Method::PATCH => node_patch(&state, req).await,
         _ => not_found(),
     }
 }
 
 /// The descriptor shape `GET` and a successful `PATCH` both return.
-fn node_descriptor(state: &HyphaState) -> serde_json::Value {
-    let mut capabilities = vec!["entities", "events", "export"];
-    if state.push.is_some() {
-        capabilities.push("push");
-    }
-    if state.pairing.is_some() {
-        capabilities.push("pairing");
-    }
+/// `agents` prefers the live [`crate::AgentLister`] provider over the
+/// static `node_agents` list; `capabilities` honors the integration's
+/// `node_capabilities` override before the substrate defaults.
+async fn node_descriptor(state: &HyphaState) -> serde_json::Value {
+    let agents = match &state.agent_lister {
+        Some(lister) => lister().await,
+        None => state.node_agents.clone(),
+    };
+    let capabilities = state.node_capabilities.clone().unwrap_or_else(|| {
+        let mut capabilities: Vec<String> = ["entities", "events", "export"]
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
+        if state.push.is_some() {
+            capabilities.push("push".into());
+        }
+        if state.pairing.is_some() {
+            capabilities.push("pairing".into());
+        }
+        capabilities
+    });
     let identity = state.node_identity();
     json!({
         "id": identity.id,
         "name": identity.name,
         "version": identity.version,
         "protocol": PROTOCOL_VERSION,
-        "agents": state.node_agents,
+        "agents": agents,
         "capabilities": capabilities,
     })
 }
 
-fn node_get(state: &HyphaState) -> Response {
-    json_response(node_descriptor(state), StatusCode::OK)
+async fn node_get(state: &HyphaState) -> Response {
+    json_response(node_descriptor(state).await, StatusCode::OK)
 }
 
 /// `PATCH /api/node` — `{name}` renames the node, persists to
@@ -219,7 +232,7 @@ async fn node_patch(state: &HyphaState, req: Request<Body>) -> Response {
         .node
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner) = updated;
-    json_response(node_descriptor(state), StatusCode::OK)
+    json_response(node_descriptor(state).await, StatusCode::OK)
 }
 
 /// env-var fallback when `nix` can't resolve the uid — extracted so

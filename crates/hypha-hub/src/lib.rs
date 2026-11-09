@@ -394,9 +394,7 @@ pub fn hub_state_from_with(
     let engine = hypha_sync::SyncEngine::spawn(projection, outbox, targets, options);
     // `unwrap_or_else` above guarantees at least the single-node row.
     let upstream = nodes.first().cloned().unwrap_or_default();
-    let api = Arc::new(
-        sync_api::SyncEntityApi::new(engine, nodes, creds).with_policies(policies.clone()),
-    );
+    let api = Arc::new(sync_api::SyncEntityApi::new(engine, nodes, creds).with_policies(policies));
     let mut state = HubState::new(
         Arc::clone(&api) as Arc<dyn EntityApi>,
         upstream.url.as_str(),

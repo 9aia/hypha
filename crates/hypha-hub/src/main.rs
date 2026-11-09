@@ -30,13 +30,10 @@ async fn main() -> std::io::Result<()> {
             #[cfg(unix)]
             {
                 use tokio::signal::unix::{SignalKind, signal};
-                let mut term = match signal(SignalKind::terminate()) {
-                    Ok(t) => t,
-                    Err(_) => {
-                        let _ = tokio::signal::ctrl_c().await;
-                        tracing::info!("hypha-hub shutting down");
-                        return;
-                    }
+                let Ok(mut term) = signal(SignalKind::terminate()) else {
+                    let _ = tokio::signal::ctrl_c().await;
+                    tracing::info!("hypha-hub shutting down");
+                    return;
                 };
                 tokio::select! {
                     _ = tokio::signal::ctrl_c() => {}

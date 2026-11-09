@@ -115,8 +115,32 @@ fn main() -> ExitCode {
             }
         }
         Some("fmt") => run("cargo", &["fmt", "--all"]),
+        Some("install") => {
+            if !run("cargo", &["build", "--release", "--bins"]) {
+                return ExitCode::FAILURE;
+            }
+            let home = std::env::var_os("HOME")
+                .map_or_else(|| std::path::PathBuf::from("/"), std::path::PathBuf::from);
+            let out = home.join(".local/bin");
+            if let Err(e) = std::fs::create_dir_all(&out) {
+                eprintln!("xtask: cannot create {}: {e}", out.display());
+                return ExitCode::FAILURE;
+            }
+            let mut ok = true;
+            for bin in ["hypha", "hypha-hub"] {
+                let src = format!("target/release/{bin}");
+                match std::fs::copy(&src, out.join(bin)) {
+                    Ok(_) => println!("installed {bin} to {}", out.display()),
+                    Err(e) => {
+                        eprintln!("xtask: cannot install {bin}: {e}");
+                        ok = false;
+                    }
+                }
+            }
+            ok
+        }
         _ => {
-            eprintln!("usage: cargo xtask <check|test|coverage|fmt>");
+            eprintln!("usage: cargo xtask <check|test|coverage|fmt|install>");
             return ExitCode::from(2);
         }
     };

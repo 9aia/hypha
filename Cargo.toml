@@ -6,8 +6,10 @@ members = [
     "crates/hypha-keyring",
     "crates/hypha-node-api",
     "crates/hypha-outbox",
+    "crates/hypha-push",
     "crates/hypha-secret",
     "crates/hypha-service",
+    "crates/hypha-sync",
     "crates/hypha-systemd",
     "crates/hypha-telemetry",
     "xtask",
@@ -26,8 +28,10 @@ hypha-dotenv = { path = "crates/hypha-dotenv" }
 hypha-keyring = { path = "crates/hypha-keyring" }
 hypha-node-api = { path = "crates/hypha-node-api" }
 hypha-outbox = { path = "crates/hypha-outbox" }
+hypha-push = { path = "crates/hypha-push" }
 hypha-secret = { path = "crates/hypha-secret" }
 hypha-service = { path = "crates/hypha-service" }
+hypha-sync = { path = "crates/hypha-sync" }
 hypha-systemd = { path = "crates/hypha-systemd" }
 hypha-telemetry = { path = "crates/hypha-telemetry" }
 
@@ -47,10 +51,16 @@ tokio = { version = "1", features = [
   "time",
   "fs",
 ] }
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 rusqlite = { version = "0.32" }
 ureq = { version = "3", features = ["json"] }
+base64 = "0.22"
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+rand = "0.8"
+web-push = { version = "0.11", features = ["isahc-client"] }
 time = { version = "0.3", features = ["formatting"] }
 tempfile = "3"
 uuid = { version = "1", features = ["v4", "serde"] }

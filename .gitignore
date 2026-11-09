@@ -1,0 +1,31 @@
+# Logs
+logs
+*.log
+
+node_modules
+dist
+*.local
+
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+
+# Python runtime artifacts
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Agent worktrees
+project/
+docs/
+
+# rust
+target/
+/Cargo.lock.tmp
+.kuda/index.sqlite
+.kuda/meta.json

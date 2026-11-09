@@ -1,0 +1,32 @@
+# hypha
+
+> The distributed substrate
+
+Entities, ops, snapshots, and locks across your machines — the connective layer between nodes and workloads.
+
+## Table of Contents
+
+### Tutorials
+
+- [Your first entity](/hypha/tutorials/first-entity.md)
+
+### How-to
+
+- [Build and test](/hypha/how-to/run-the-tests.md)
+- [Read the ledger](/hypha/how-to/read-the-ledger.md)
+
+### Explanation
+
+- [Architecture](/hypha/explanation/architecture.md)
+- [Entities, ops, snapshots](/hypha/explanation/model.md)
+- [Boundary with sepia and peregrin](/hypha/explanation/boundary.md)
+
+### Reference
+
+- [Crates](/hypha/reference/crates.md)
+- [Environment](/hypha/reference/environment.md)
+- [Wire API](/hypha/reference/wire-api.md)
+
+### Other
+
+- [Getting started](/hypha/getting-started.md)

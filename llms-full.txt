@@ -1,0 +1,404 @@
+---
+url: /hypha/tutorials/first-entity.md
+---
+# Your first entity
+
+This tutorial walks the entity model end to end — the shapes the
+substrate moves, before any binary exists to drive them. Everything
+here is the wire contract `hypha-node-api` already implements.
+
+## The three primitives
+
+**Entity** — the thing being orchestrated:
+
+```json
+{
+  "id": "sess-42",
+  "kind": "sepia-session",
+  "node": "node-a",
+  "indexDoc": { "title": "fix the flaky test", "locked": false },
+  "health": { "live": true }
+}
+```
+
+`kind` is a free-form tag registered by an integration.
+`indexDoc` is opaque JSON the integration writes for list views —
+hypha stores and merges it, never interprets it.
+
+**Op** — a command submitted to an entity's owner node:
+
+```json
+{ "entity": "sess-42", "kind": "sepia.prompt", "payload": { "text": "hi" } }
+```
+
+Op kinds are namespaced `<integration>.<verb>`; payloads are opaque
+to hypha. `entity.delete` is the one reserved substrate op.
+
+**Snapshot** — serialize → transfer → resume:
+
+```json
+{ "entity": "sess-42", "ref": "…", "bytes": "…" }
+```
+
+Bytes are opaque end-to-end; export/import semantics belong to the
+integration that owns the kind.
+
+## The flow
+
+1. A client (CLI, hub, another integration) lists entities:
+   `GET /api/entities` → merged index rows `{id, kind, indexDoc, …}`.
+2. It submits an op: `POST /api/entities/{id}/ops`. If the owner node
+   is down, the hub's `hypha-outbox` queues it per-entity FIFO and
+   replays on reconnect.
+3. Before routing, `hypha-control` arbitrates: is the entity locked,
+   who owns it, does this op preempt or queue?
+4. To move a workload: `GET …/snapshot` on the owner, `POST
+   /api/entities/snapshot` on the target — the integration's
+   export/import does the rest.
+
+## Try it in code
+
+`hypha-node-api` ships `FakeEntityApi` — an in-memory `EntityApi`
+impl for tests — and `HttpEntityApi`, the ureq client for real
+nodes. `hypha-control`'s `pick_owner`/`Arbitration` are pure functions
+you can exercise without any I/O.
+
+```rust
+use hypha_control::{pick_owner, Arbitration};
+```
+
+See [reference/crates](../reference/crates.md) for the full surface.
+
+---
+
+---
+url: /hypha/how-to/run-the-tests.md
+---
+# Build and test
+
+```bash
+cargo xtask check     # cargo fmt --check + clippy --workspace --all-targets -D warnings
+cargo xtask test      # cargo nextest run --workspace (falls back to cargo test)
+cargo xtask coverage  # cargo llvm-cov HTML report → target/llvm-cov/html
+cargo xtask fmt       # apply formatting
+```
+
+CI (`.github/workflows/ci.yml`) runs lint, nextest + doctests, and a
+coverage job that **gates on 100% line coverage** — any `DA:<line>,0`
+in the lcov report fails the build.
+
+Scope a single crate while iterating:
+
+```bash
+cargo nextest run -p hypha-outbox
+cargo clippy -p hypha-control --all-targets
+```
+
+---
+
+---
+url: /hypha/how-to/read-the-ledger.md
+---
+# Read the ledger
+
+All project state lives in the `project/` worktree via
+[myco](https://github.com/9aia/myco) — tasks, backlog, issues,
+proposals, plans, ADRs, handoffs. Never hand-edit files there; the
+`myco` verbs are the write path.
+
+```bash
+myco status --prompt   # the board, token-sized
+myco resume PL-005     # the extraction plan — briefing + handoffs
+myco view board        # kanban
+```
+
+The master plan for this repo's existence is **PL-005** in the org
+ledger (`9aia/workspace → repos/project`): "hypha — entity substrate
+extraction from peregrin". Its handoffs carry the phase-by-phase
+execution log.
+
+---
+
+---
+url: /hypha/explanation/architecture.md
+---
+# Architecture
+
+Hypha is the *substrate* layer: distributed primitives over generic
+entities. It owns who may act on an entity, when, and on which
+machine — plus the transport that gets ops and snapshots there.
+
+```
+                 ┌─────────────── hypha-hub ───────────────┐
+                 │  merged index · op routing · push · SSE  │
+                 └──────────────┬───────────────┬──────────┘
+                        HTTP+SSE │               │ HTTP+SSE
+                  ┌──────────────▼──┐    ┌───────▼──────────┐
+                  │ hypha node A    │    │ hypha node B     │
+                  │ /api/entities*  │    │ /api/entities*   │
+                  │ KindRegistry    │    │ KindRegistry     │
+                  └───────┬─────────┘    └────────┬─────────┘
+                          │  integrations register entity planes:
+              ┌───────────┼───────────────────────┼───────────┐
+              ▼           ▼                       ▼           ▼
+        sepia-session  campaign-run          <kind-N>     entity.*
+        (sepia repo)   (peregrin repo)       (any repo)   (substrate)
+```
+
+## Planes
+
+* **Entity plane** — this repo: `EntityApi` contract
+  (`hypha-node-api`), node host (`hypha serve`, lands P3), HTTP
+  surface (`hypha-http`, P3), hub gateway (`hypha-hub`, P3),
+  projection (`hypha-sync`, P2), outbox (`hypha-outbox`),
+  arbitration (`hypha-control`), push.
+* **Integration planes** — one per workload kind, living in the
+  workload's own repo: `sepia-peregrin` (sepia repo) registers
+  `kind="sepia-session"`; peregrin registers `kind="campaign"`.
+  An integration translates entity ops ↔ its verbs and implements
+  snapshot as its own serialize/resume.
+* **Orchestration plane** — campaigns, drivers, loaders. Stays in
+  peregrin; becomes a *workload on* hypha rather than a peer of it.
+
+## Ports and adapters
+
+Every I/O seam is a port (`hypha-secret`, `hypha-service`, …) with
+impls behind it (`-keyring`, `-dotenv`, `-systemd`). The substrate
+contracts are pure — `hypha-control` has no I/O at all.
+
+## Dataflow
+
+Client → hub `POST /api/entities/{id}/ops` → lock gate
+(`hypha-control`) → owner node `POST /api/entities/{id}/ops` → the
+kind's `EntityPlane::op`. Node down? `hypha-outbox` FIFO per entity,
+replayed oldest-first on reconnect. Reads merge through
+`hypha-sync`'s SQLite projection + SSE diff tail.
+
+---
+
+---
+url: /hypha/explanation/model.md
+---
+# Entities, ops, snapshots
+
+The whole substrate is three primitives. Get these and the rest is
+plumbing.
+
+## Entity
+
+`{id, kind, node, indexDoc, health}`
+
+* `kind` — free-form tag; the integration's namespace
+  (`sepia-session`, `campaign`, …).
+* `indexDoc` — opaque JSON for list views. Hypha merges and
+  columnizes it; meaning belongs to the integration.
+* `health` — liveness/lock state reported by the owner node.
+
+## Op
+
+`{entity, kind, payload}` — submitted to an entity's **owner node**.
+
+* `kind` is namespaced `<integration>.<verb>` (`sepia.prompt`,
+  `campaign.start`); `entity.*` is the reserved substrate namespace
+  (`entity.delete` only, today).
+* `payload` is opaque to hypha — the owning plane interprets it.
+* Ops are idempotent-keyed and TTL'd in the outbox; `Turn`-class ops
+  dead-letter on first failure.
+
+## Snapshot
+
+`{entity, ref, bytes}` — the migration primitive.
+
+Serialize on the owner (`GET /api/entities/{id}/snapshot`), import on
+the target (`POST /api/entities/snapshot`). Bytes are opaque
+end-to-end; resume semantics are the integration's
+(`campaign-snapshot/v1`, sepia session IR export, …).
+
+## Why generic
+
+The distributed abilities — sync, arbitration, outbox, transfer,
+pairing — are orchestration-domain but workload-agnostic. Shaping
+them around sessions was the mistake ADR-0091 corrected; shaping
+them around *entities* is what lets bupha jobs, sturn claims, or
+cicada schedules become kinds without touching this repo.
+
+---
+
+---
+url: /hypha/explanation/boundary.md
+---
+# Boundary with sepia and peregrin
+
+Hypha sits between two neighbors and must stay generic against both.
+
+## sepia — session *mechanism*
+
+Sepia owns everything you can do **to** a session: attach, prompt,
+restore, rewind, per-agent stores. It is deliberately just the
+agent-session abstraction — it must never learn about locks,
+multi-node, or orchestration.
+
+Hypha's side of the contract: the `sepia-peregrin` adapter (which
+lives **in the sepia repo**) registers `kind="sepia-session"`
+entities, translates entity ops ↔ session verbs, and implements
+snapshot as sepia's session IR export/import. Hypha never names a
+sepia type; sepia never learns hypha exists — the adapter is the
+only coupling, and it depends on hypha's public API, never the
+reverse.
+
+## peregrin — orchestration *policy + campaigns*
+
+Peregrin owns campaigns (declarative event-driven workflows),
+drivers, loaders, and policy (who may act, when, from where). Post
+PL-005, peregrin's distributed layer **is** hypha: `peregrin-node`
+becomes a thin composition root that registers entity planes —
+`sepia-session` (via the adapter) and `campaign` (its own
+`campaign_entity.rs`) — on a hypha node host.
+
+The dependency direction is one-way:
+
+```
+peregrin (orchestration) → hypha (substrate) → ports
+```
+
+Orchestration may sit *on* the substrate; the substrate never
+imports orchestration. `peregrin-hub`'s gateway role moves to
+`hypha-hub`; peregrin keeps campaign verbs in its CLI.
+
+## The rule of thumb
+
+* "Something you do to a workload" → the integration repo.
+* "Who may act on entity X, when, from where" → hypha.
+* "A workflow of events and steps" → peregrin.
+
+---
+
+---
+url: /hypha/reference/crates.md
+---
+# Crates
+
+Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
+`unwrap_used`/`expect_used` warn, `unsafe_code` forbid); edition
+2024, rust-version 1.85.
+
+| Crate | Role | Status |
+| --- | --- | --- |
+| `hypha-node-api` | `EntityApi` trait + wire DTOs + `HttpEntityApi`/`FakeEntityApi` | landed |
+| `hypha-outbox` | durable per-entity FIFO op queue (SQLite) | landed |
+| `hypha-control` | pure arbitration — locks, takeover, `pick_owner` | landed |
+| `hypha-telemetry` | opt-in OTEL over `tracing` | landed |
+| `hypha-secret` | secrets port (`get`/`set`, names not values) | landed |
+| `hypha-keyring` | OS-keyring impl (`secret-tool`) | landed |
+| `hypha-dotenv` | dotenv-file impl | landed |
+| `hypha-service` | service-install port | landed |
+| `hypha-systemd` | systemd unit render/install impl | landed |
+| `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | P2 |
+| `hypha-http` | substrate HTTP surface + node host (ex-`peregrin-http` split) | P3 |
+| `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) | P3 |
+| `hypha` / `hypha-hub` bins | `hypha serve` node host, hub binary | P3 |
+
+Migration state lives in org-ledger plan **PL-005**; crate-level
+API docs build via `bun run docs:api` (cargo doc →
+`public/api/`).
+
+---
+
+---
+url: /hypha/reference/environment.md
+---
+# Environment
+
+Hypha-native variables (landed crates):
+
+| Variable | Crate | Meaning |
+| --- | --- | --- |
+| `HYPHA_OTEL_ENDPOINT` | `hypha-telemetry` | OTLP base endpoint; `/v1/traces` appended when no path present |
+| `HYPHA_OTEL_SERVICE_NAME` | `hypha-telemetry` | service.name (default `"hypha"`, `OTEL_SERVICE_NAME` also honored) |
+| `OTEL_EXPORTER_OTLP_*` | `hypha-telemetry` | standard OTLP vars also enable export |
+
+Standard OTEL vars (`OTEL_*`) are honored per OpenTelemetry semantic
+conventions. Node/hub variables (`PEREGRIN_*` today — `HYPHA_*`
+post-cutover) land with the binaries in P3; see the org ledger for
+the rename mapping.
+
+---
+
+---
+url: /hypha/reference/wire-api.md
+---
+# Wire API
+
+The entity-plane HTTP surface (served by the node host, aggregated by
+the hub). Routes land with `hypha-http`/`hypha-hub` in P3; the shapes
+below are the contract `hypha-node-api` already codes against.
+
+## Node surface — `/api/entities*`
+
+| Route | Verb | Purpose |
+| --- | --- | --- |
+| `/api/entities` | GET | list entities (`?kind=`, `?withLocks=1`) |
+| `/api/entities` | POST | create entity (kind-registered) |
+| `/api/entities/{id}` | GET/DELETE | entity detail / delete (`entity.delete` op) |
+| `/api/entities/{id}/ops` | POST | submit op `{kind, payload}` |
+| `/api/entities/{id}/snapshot` | GET | export snapshot bytes |
+| `/api/entities/snapshot` | POST | import snapshot onto this node |
+
+## Hub surface
+
+Same `/api/entities*` shape, aggregated: merged index from all
+`HYPHA_NODES`/`PEREGRIN_NODES`, ops routed to the owner (outbox
+queued when offline), `/api/events` SSE diff feed, push bridges.
+
+## Client
+
+`hypha_node_api::HttpEntityApi` (ureq) implements `EntityApi`;
+`FakeEntityApi` is the in-memory test double. Wire DTOs:
+`EntityDto`, `EntityOp`, `EntityIndexDto`, `PendingOpDto`,
+`NodeInfoDto`, `NodeStatusDto`, `PushSubscriptionDto` — see
+`hypha-node-api/src/dto.rs` and the generated rustdoc under
+`/hypha/api/`.
+
+---
+
+---
+url: /hypha/getting-started.md
+---
+# Getting started
+
+Hypha is the distributed substrate extracted from peregrin's entity
+plane (org plan PL-005). It is **pre-binary**: the leaf crates are
+landed and tested; the node host (`hypha serve`), the HTTP surface
+(`hypha-http`), and the hub gateway (`hypha-hub`) land in phases
+P2–P3 of the migration plan.
+
+## What exists today
+
+| Crate | What it gives you |
+| --- | --- |
+| `hypha-node-api` | The node↔hub contract — `EntityApi` trait, wire DTOs, `HttpEntityApi` client, `FakeEntityApi` for tests |
+| `hypha-outbox` | Durable per-entity FIFO op queue (SQLite) — writes survive node downtime |
+| `hypha-control` | Pure arbitration — lock registry, takeover decisions, `pick_owner` routing |
+| `hypha-telemetry` | Opt-in OTEL layer over `tracing` (`HYPHA_OTEL_*` env vars) |
+| `hypha-secret` + `-keyring`/`-dotenv` | Secrets port — names, not values |
+| `hypha-service` + `-systemd` | Service-install port + systemd impl |
+
+## Build from source
+
+```bash
+git clone git@github.com:9aia/hypha.git
+cd hypha
+./scripts/setup.sh      # wires git hooks
+cargo xtask check       # fmt + clippy -D warnings
+cargo xtask test        # whole suite (nextest if present)
+```
+
+Rust 1.98 (see `rust-toolchain.toml`), edition 2024.
+
+## Where next
+
+* [Your first entity](tutorials/first-entity.md) — the entity model
+  end to end, with wire shapes.
+* [Architecture](explanation/architecture.md) — planes, nodes, hub.
+* [Boundary](explanation/boundary.md) — what hypha owns vs sepia and
+  peregrin.

@@ -1,0 +1,9 @@
+# Consumer-side override: to build against a sibling hypha checkout
+# instead of the git dep, append this to the *consumer's*
+# .cargo/config.toml (e.g. peregrin's), listing every hypha crate the
+# consumer depends on:
+#
+# [patch."ssh://git@github.com/9aia/hypha.git"]
+# hypha-node-api = { path = "../hypha/crates/hypha-node-api" }
+# hypha-outbox = { path = "../hypha/crates/hypha-outbox" }
+# …

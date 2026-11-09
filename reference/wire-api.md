@@ -37,6 +37,7 @@ offline), plus hub-owned routes:
 | Route | Purpose |
 | --- | --- |
 | `/api/entity-index` | merged per-node entity buckets |
+| `/api/node-status` | `{"nodes": [...]}` — per-node liveness: `status` (`unknown`/`up`/`down`), `lastSeenAt`, `downSince` (first observed failure), `ephemeral` (self-reported disposable lifecycle) |
 | `/api/pending-ops` | outbox depth — queued + dead-letter ops |
 | `/api/events` | SSE bridge to the upstream node |
 | `/api/entities/{id}/stream` | per-entity live stream (kind policy's `stream_path`, owning node) |
@@ -46,6 +47,26 @@ offline), plus hub-owned routes:
 Not on the substrate: `/api/config*` — node config is
 integration-owned (a composing integration mounts its own surface);
 `EntityApi::get_config`/`set_config` are doc-hidden for that reason.
+
+### Node lifecycle
+
+The sync engine tracks each registered node on the projection's
+`nodes` row: `status` moves `unknown → up` on a successful
+subscribe+list and back to `down` on any failed cycle (reconnects
+retry forever at capped exponential backoff). `downSince` stamps the
+first observed failure and clears on reconnect. Merged entity lists
+carry the owner's status inline as `nodeStatus`, so a dead node's
+stale index entries are distinguishable from live ones; ops to a
+down node queue durably in the hub outbox and replay on reconnect.
+
+A node whose `GET /api/node` `capabilities` include `"ephemeral"`
+(e.g. `peregrin serve --ephemeral` CI runners) is treated as
+disposable: once it has been continuously `down` for
+`SyncOptions::ephemeral_dead_after` (default 5 min) the engine drops
+its projected entities — a resurrected node resyncs itself — and
+dead-letters its queued writes rather than letting them pend
+forever. The `nodes` row stays, so `/api/node-status` keeps reporting
+`down` + `ephemeral`.
 
 ## Client
 

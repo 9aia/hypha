@@ -17,7 +17,7 @@ Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
 | `hypha-systemd` | systemd unit render/install impl | landed |
 | `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | landed |
 | `hypha-push` | Web Push over a JSON doc store — VAPID, subscriptions, 404/410 prune (ex-`peregrin-push`) | landed |
-| `hypha-http` | substrate HTTP surface + node host (ex-`peregrin-http` split) | P3 |
+| `hypha-http` | substrate HTTP surface — `/api/entities*` kind planes, `/api/events` feed, node/pairing/auth, `/api/push/*` (ex-`peregrin-http` split); node host still P3 | landed |
 | `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) | P3 |
 | `hypha` / `hypha-hub` bins | `hypha serve` node host, hub binary | P3 |
 

@@ -18,8 +18,9 @@ Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
 | `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | landed |
 | `hypha-push` | Web Push over a JSON doc store — VAPID, subscriptions, 404/410 prune (ex-`peregrin-push`) | landed |
 | `hypha-http` | substrate HTTP surface — `/api/entities*` kind planes, `/api/events` feed, node/pairing/auth, `/api/push/*` (ex-`peregrin-http` split); node host still P3 | landed |
-| `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) | P3 |
-| `hypha` / `hypha-hub` bins | `hypha serve` node host, hub binary | P3 |
+| `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi`, merged `/api/entities*`, SSE/passthrough proxies, push, node credentials; policy-injected `KindPolicies` | landed |
+| `hypha-node` | node host library (`Env`→`HyphaState`→`hypha_http::app`, `with_kind` plane registration) + `hypha` bin (`hypha serve`, zero kinds) | landed |
+| `hypha-hub` bin | gateway binary (`src/main.rs` in `hypha-hub`) — `HYPHA_NODES` + `HYPHA_HUB_*` env | landed |
 
 Migration state lives in org-ledger plan **PL-005**; crate-level
 API docs build via `bun run docs:api` (cargo doc →

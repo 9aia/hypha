@@ -1,7 +1,7 @@
 +++
 id = "ADR-0001"
 title = "Extraction from peregrin — entity plane becomes hypha"
-status = "claimed"
+status = "in-progress"
 created = "2026-11-09"
 priority = "medium"
 +++

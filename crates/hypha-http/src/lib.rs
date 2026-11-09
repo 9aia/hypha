@@ -106,7 +106,16 @@ pub struct HyphaState {
     pub keep_alive: Duration,
     /// Web Push service — `None` → `/api/push/*` answers 501.
     pub push: Option<Arc<hypha_push::PushStore>>,
+    /// Deep health probe for `GET /api/health` — integrations with a
+    /// real liveness check (peregrin's session-plane probe) install a
+    /// handler returning the full response; `None` → the static
+    /// `{"ok":true}` liveness answer.
+    pub health_probe: Option<HealthProbe>,
 }
+
+/// A `GET /api/health` override — returns the complete response
+/// (status + body) the integration wants probes to see.
+pub type HealthProbe = Arc<dyn Fn() -> futures::future::BoxFuture<'static, Response> + Send + Sync>;
 
 impl HyphaState {
     /// Minimal state — tokenless, no pairing, no push, ephemeral node
@@ -138,6 +147,7 @@ impl HyphaState {
             ],
             keep_alive: Duration::from_millis(env::DEFAULT_SSE_KEEPALIVE_MS),
             push: None,
+            health_probe: None,
         }
     }
 
@@ -169,6 +179,7 @@ impl HyphaState {
             push: Some(Arc::new(hypha_push::PushStore::open(
                 hypha_push::JsonDocStore::open(&env.push_path),
             ))),
+            health_probe: None,
         }
     }
 
@@ -293,6 +304,14 @@ impl HyphaState {
         self.push = push;
         self
     }
+
+    /// Install a deep `GET /api/health` probe — see
+    /// [`Self::health_probe`].
+    #[must_use]
+    pub fn with_health_probe(mut self, probe: HealthProbe) -> Self {
+        self.health_probe = Some(probe);
+        self
+    }
 }
 
 impl Default for HyphaState {
@@ -376,14 +395,21 @@ async fn log_layer(req: Request<Body>, next: Next) -> Response {
     res
 }
 
-/// Build the substrate axum router — only the kind-agnostic surface:
-/// health, pairing + auth bootstrap, node, fs, user, the event feed,
-/// `/api/entities*`, and `/api/push/*`. Every route is `any()` + an
-/// internal method guard so wrong-method requests fall through to the
-/// 404 (rather than axum's bare 405). Integrations nest their own
-/// routes around or inside this router and register entity planes on
-/// the shared [`HyphaState`].
-pub fn app(state: HyphaState) -> Router {
+/// Build the substrate route table + middleware WITHOUT the terminal
+/// fallback — returns `Router<HyphaState>` so an integration can
+/// `.with_state(...)` it and `merge` it with its own router under one
+/// listener. axum panics merging two routers that both carry a custom
+/// fallback, so the composer installs exactly one (see
+/// [`app_routes`] vs [`app`]).
+///
+/// Only the kind-agnostic surface: health, pairing + auth bootstrap,
+/// node, fs, user, the event feed, `/api/entities*`, and
+/// `/api/push/*`. Every route is `any()` + an internal method guard so
+/// wrong-method requests fall through to the 404 (rather than axum's
+/// bare 405). Integrations nest their own routes around or inside
+/// this router and register entity planes on the shared
+/// [`HyphaState`].
+pub fn app_routes(state: &HyphaState) -> Router<HyphaState> {
     Router::new()
         // Pre-auth routes — the auth gate itself passes these through
         // (health for probes; pair/login are the credential bootstrap).
@@ -408,7 +434,6 @@ pub fn app(state: HyphaState) -> Router {
         )
         .route("/api/push/vapid", any(routes::push::vapid))
         .route("/api/push/subscribe", any(routes::push::subscribe))
-        .fallback(async || routes::not_found())
         // Every body read goes through `read_json_body` with an
         // explicit per-route cap (SMALL/MAX_JSON_BODY); axum's
         // 2MiB `DefaultBodyLimit` stays on as the backstop for any
@@ -421,6 +446,15 @@ pub fn app(state: HyphaState) -> Router {
         .layer(middleware::from_fn(log_layer))
         .layer(middleware::from_fn_with_state(state.clone(), cors_layer))
         .layer(middleware::from_fn(trace_layer))
+}
+
+/// The standalone substrate router — [`app_routes`] plus the 404
+/// fallback and the state applied. Integrations composing several
+/// routers under one listener use [`app_routes`] instead and install
+/// their own single fallback.
+pub fn app(state: HyphaState) -> Router {
+    app_routes(&state)
+        .fallback(async || routes::not_found())
         .with_state(state)
 }
 

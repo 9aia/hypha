@@ -19,12 +19,17 @@ use crate::routes::{SMALL_JSON_BODY, json_response, not_found, query_param, read
 /// answer. Integrations with a deeper health check override by
 /// nesting their own route ahead of this router.
 pub async fn health(
-    State(_state): State<HyphaState>,
+    State(state): State<HyphaState>,
     method: Method,
     _req: Request<Body>,
 ) -> Response {
     if method != Method::GET {
         return not_found();
+    }
+    // An integration's deep probe (e.g. a session-plane liveness
+    // check) owns the whole response when installed.
+    if let Some(probe) = &state.health_probe {
+        return probe().await;
     }
     json_response(json!({ "ok": true }), StatusCode::OK)
 }

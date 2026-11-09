@@ -30,3 +30,4 @@ Entities, ops, snapshots, and locks across your machines — the connective laye
 ### Other
 
 - [Getting started](/hypha/getting-started.md)
+- [Untitled](/hypha/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md)

@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["hypha_http",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"struct\" href=\"hypha_http/env/struct.EnvError.html\" title=\"struct hypha_http::env::EnvError\">EnvError</a>",0]]],["hypha_outbox",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"hypha_outbox/enum.OutboxError.html\" title=\"enum hypha_outbox::OutboxError\">OutboxError</a>",0]]],["hypha_push",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"hypha_push/enum.PushError.html\" title=\"enum hypha_push::PushError\">PushError</a>",0]]],["hypha_sync",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"hypha_sync/client/enum.NodeError.html\" title=\"enum hypha_sync::client::NodeError\">NodeError</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"hypha_sync/enum.SyncError.html\" title=\"enum hypha_sync::SyncError\">SyncError</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[286,287,275,548]}

@@ -4,21 +4,10 @@ url: /hypha/getting-started.md
 # Getting started
 
 Hypha is the distributed substrate extracted from peregrin's entity
-plane (org plan PL-005). It is **pre-binary**: the leaf crates are
-landed and tested; the node host (`hypha serve`), the HTTP surface
-(`hypha-http`), and the hub gateway (`hypha-hub`) land in phases
-P2–P3 of the migration plan.
-
-## What exists today
-
-| Crate | What it gives you |
-| --- | --- |
-| `hypha-node-api` | The node↔hub contract — `EntityApi` trait, wire DTOs, `HttpEntityApi` client, `FakeEntityApi` for tests |
-| `hypha-outbox` | Durable per-entity FIFO op queue (SQLite) — writes survive node downtime |
-| `hypha-control` | Pure arbitration — lock registry, takeover decisions, `pick_owner` routing |
-| `hypha-telemetry` | Opt-in OTEL layer over `tracing` (`HYPHA_OTEL_*` env vars) |
-| `hypha-secret` + `-keyring`/`-dotenv` | Secrets port — names, not values |
-| `hypha-service` + `-systemd` | Service-install port + systemd impl |
+plane (org plan PL-005, ADR-0001). It ships two binaries: `hypha`
+(the node host, `hypha serve`) and `hypha-hub` (the multi-node
+gateway). A bare node mounts zero entity kinds — integrations
+register theirs at composition.
 
 ## Build from source
 
@@ -31,6 +20,52 @@ cargo xtask test        # whole suite (nextest if present)
 ```
 
 Rust 1.98 (see `rust-toolchain.toml`), edition 2024.
+
+## Install the binaries
+
+There is no `xtask install` — install straight from the workspace:
+
+```bash
+cargo install --path crates/hypha-node --locked   # → ~/.cargo/bin/hypha
+cargo install --path crates/hypha-hub --locked   # → ~/.cargo/bin/hypha-hub
+```
+
+## Smoke run
+
+A bare node needs no kinds and no config — loopback binds may go
+tokenless:
+
+```bash
+hypha serve            # HYPHA_HOST/HYPHA_PORT, default 127.0.0.1:18787
+curl localhost:18787/api/health        # {"ok":true}
+curl localhost:18787/api/node          # node descriptor
+curl localhost:18787/api/entities      # {"entities":[]} — no kinds yet
+```
+
+The hub gateways that node (`HYPHA_NODE_URL` defaults to
+`http://127.0.0.1:18787`):
+
+```bash
+hypha-hub              # HYPHA_HUB_HOST/HYPHA_HUB_PORT, default 127.0.0.1:13000
+curl localhost:13000/api/entity-index  # merged index (one row)
+curl localhost:13000/api/pending-ops   # outbox depth
+```
+
+See [Environment](reference/environment.md) for the full `HYPHA_*`
+surface and [Wire API](reference/wire-api.md) for the routes.
+
+## Upgrading from peregrin — secrets move
+
+`hypha-keyring` stores under the `secret-tool` service attribute
+`"hypha"` (was `"peregrin"`), and `hypha-hub` node credentials live
+under `"hypha-hub"` (was `"peregrin-hub"`). **There is no automatic
+migration** — old entries are orphaned, not moved. After upgrading:
+
+* re-run pairing (`POST /api/pair` flow) or re-store secrets with
+  `secret-tool store --label "hypha: <name>" service hypha name <name>`
+* hub node tokens: either re-pair each node, or let an env
+  `HYPHA_NODES` `@token`/`HYPHA_NODE_TOKEN` re-seed the store on the
+  next boot (`HYPHA_CREDENTIAL_STORE` picks keyring vs file backend)
 
 ## Where next
 

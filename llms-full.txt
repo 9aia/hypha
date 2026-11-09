@@ -148,10 +148,10 @@ machine — plus the transport that gets ops and snapshots there.
 ## Planes
 
 * **Entity plane** — this repo: `EntityApi` contract
-  (`hypha-node-api`), node host (`hypha serve`, lands P3), HTTP
-  surface (`hypha-http`, P3), hub gateway (`hypha-hub`, P3),
-  projection (`hypha-sync`, P2), outbox (`hypha-outbox`),
-  arbitration (`hypha-control`), push.
+  (`hypha-node-api`), node host (`hypha serve`, `hypha-node` +
+  `hypha-http`), hub gateway (`hypha-hub`), projection
+  (`hypha-sync`), outbox (`hypha-outbox`), arbitration
+  (`hypha-control`), push.
 * **Integration planes** — one per workload kind, living in the
   workload's own repo: `sepia-peregrin` (sepia repo) registers
   `kind="sepia-session"`; peregrin registers `kind="campaign"`.
@@ -293,10 +293,12 @@ Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
 | `hypha-dotenv` | dotenv-file impl | landed |
 | `hypha-service` | service-install port | landed |
 | `hypha-systemd` | systemd unit render/install impl | landed |
-| `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | P2 |
-| `hypha-http` | substrate HTTP surface + node host (ex-`peregrin-http` split) | P3 |
-| `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) | P3 |
-| `hypha` / `hypha-hub` bins | `hypha serve` node host, hub binary | P3 |
+| `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | landed |
+| `hypha-push` | Web Push over a JSON doc store — VAPID, subscriptions, 404/410 prune (ex-`peregrin-push`) | landed |
+| `hypha-http` | substrate HTTP surface — `/api/entities*` kind planes, `/api/entity-index`/`/api/pending-ops`, `/api/events` feed, node/pairing/auth, `/api/push/*` (ex-`peregrin-http` split) | landed |
+| `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi`, merged `/api/entities*`, SSE/passthrough proxies, push, node credentials; policy-injected `KindPolicies`; `hypha-hub` bin (`HYPHA_NODES` + `HYPHA_HUB_*` env) | landed |
+| `hypha-node` | node host library (`Env`→`HyphaState`→`hypha_http::app`, `with_kind` plane registration) + `hypha` bin (`hypha serve`, zero kinds) | landed |
+| `xtask` | `check` (fmt + clippy) / `test` / `coverage` / `fmt` | landed |
 
 Migration state lives in org-ledger plan **PL-005**; crate-level
 API docs build via `bun run docs:api` (cargo doc →
@@ -318,9 +320,36 @@ Hypha-native variables (landed crates):
 | `OTEL_EXPORTER_OTLP_*` | `hypha-telemetry` | standard OTLP vars also enable export |
 
 Standard OTEL vars (`OTEL_*`) are honored per OpenTelemetry semantic
-conventions. Node/hub variables (`PEREGRIN_*` today — `HYPHA_*`
-post-cutover) land with the binaries in P3; see the org ledger for
-the rename mapping.
+conventions.
+
+Node host (`hypha serve`, `hypha-http::env::Env`):
+
+| Variable | Meaning |
+| --- | --- |
+| `HYPHA_HOST` / `HYPHA_PORT` (or `PORT`) | bind address (default `127.0.0.1:18787`) |
+| `HYPHA_TOKEN` | bearer auth; required on non-loopback binds |
+| `HYPHA_HOME` | hypha data dir (default `~/.local/share/hypha`) |
+| `HYPHA_NODE` | node identity file (default `<home>/node.json`) |
+| `HYPHA_NAME` | display name on `GET /api/node` |
+| `HYPHA_ORIGINS` | CORS allowlist |
+| `HYPHA_SSE_KEEPALIVE_MS` | `/api/events` keep-alive cadence (`0` disables) |
+| `HYPHA_PAIR_LIMIT_PER_MIN` / `HYPHA_PAIR_LIMIT_PER_DAY` | `/api/pair` throttle per client IP |
+| `HYPHA_PUSH` / `HYPHA_PUSH_PATH` | push config document (default `<home>/push.json`) |
+
+Hub (`hypha-hub`, `hypha_hub::HubConfig` + `hub_state_from_with`):
+
+| Variable | Meaning |
+| --- | --- |
+| `HYPHA_HUB_HOST` / `HYPHA_HUB_PORT` (or `HYPHA_PORT`) | bind (default `127.0.0.1:13000`) |
+| `HYPHA_HUB_TOKEN` | client→hub auth; required on non-loopback binds |
+| `HYPHA_NODE_URL` / `HYPHA_NODE_TOKEN` | single-node upstream shorthand |
+| `HYPHA_NODES` | `id=url[@token];…` multi-node registry |
+| `HYPHA_HOME` | hub data under `<home>/hub/` (projection, outbox, push, credentials) |
+| `HYPHA_CREDENTIAL_STORE` | `auto`/`keyring`/`file` node-token backend |
+
+Both binaries (`hypha serve`, `hypha-hub`) initialize the same OTEL
+layer — the `HYPHA_OTEL_*`/`OTEL_EXPORTER_OTLP_*` vars above apply to
+each process.
 
 ---
 
@@ -329,26 +358,52 @@ url: /hypha/reference/wire-api.md
 ---
 # Wire API
 
-The entity-plane HTTP surface (served by the node host, aggregated by
-the hub). Routes land with `hypha-http`/`hypha-hub` in P3; the shapes
-below are the contract `hypha-node-api` already codes against.
+The entity-plane HTTP surface — served by the node host
+(`hypha-http`), aggregated by the hub (`hypha-hub`). One canonical
+spelling per route: `hypha-node-api`'s `HttpEntityApi` and the hub
+speak the same paths. (The P3-era alias spellings —
+`/api/entities/{id}/export`, `/api/entities/import`, `/api/index`,
+`/api/outbox` — are gone.)
 
-## Node surface — `/api/entities*`
+## Node surface
 
 | Route | Verb | Purpose |
 | --- | --- | --- |
-| `/api/entities` | GET | list entities (`?kind=`, `?withLocks=1`) |
-| `/api/entities` | POST | create entity (kind-registered) |
-| `/api/entities/{id}` | GET/DELETE | entity detail / delete (`entity.delete` op) |
+| `/api/health` | GET | liveness probe (pre-auth) |
+| `/api/pair` | POST | redeem a pairing code → bearer token |
+| `/api/auth/login` `/api/auth/logout` | POST | auth-cookie exchange |
+| `/api/user` | GET | OS user info for pickers |
+| `/api/node` | GET/PATCH | node descriptor / rename |
+| `/api/fs?path=` | GET | direct subdirectories of an absolute path |
+| `/api/events` | GET | SSE event feed |
+| `/api/entities` | GET/POST | list (`?kind=`) / create entity |
+| `/api/entities/{id}` | GET/DELETE | entity doc / `entity.delete` |
 | `/api/entities/{id}/ops` | POST | submit op `{kind, payload}` |
 | `/api/entities/{id}/snapshot` | GET | export snapshot bytes |
-| `/api/entities/snapshot` | POST | import snapshot onto this node |
+| `/api/entities/snapshot` | POST | import snapshot (`body.kind` picks the plane) |
+| `/api/entity-index` | GET | `{"index": [{node, entities}]}` — one row, this node |
+| `/api/pending-ops` | GET | `{"ops": [...]}` — always empty on a bare node (the outbox is hub-side) |
+| `/api/push/vapid` | GET | `{publicKey}` (501 without a push store) |
+| `/api/push/subscribe` | POST/DELETE | push subscription add/remove |
 
 ## Hub surface
 
 Same `/api/entities*` shape, aggregated: merged index from all
-`HYPHA_NODES`/`PEREGRIN_NODES`, ops routed to the owner (outbox
-queued when offline), `/api/events` SSE diff feed, push bridges.
+`HYPHA_NODES` nodes, ops routed to the owner (durable outbox when
+offline), plus hub-owned routes:
+
+| Route | Purpose |
+| --- | --- |
+| `/api/entity-index` | merged per-node entity buckets |
+| `/api/pending-ops` | outbox depth — queued + dead-letter ops |
+| `/api/events` | SSE bridge to the upstream node |
+| `/api/entities/{id}/stream` | per-entity live stream (kind policy's `stream_path`, owning node) |
+| `/api/push/*` | hub-owned subscription store (fans out to every node) |
+| `/api/{*rest}` | passthrough to the upstream node for everything else |
+
+Not on the substrate: `/api/config*` — node config is
+integration-owned (a composing integration mounts its own surface);
+`EntityApi::get_config`/`set_config` are doc-hidden for that reason.
 
 ## Client
 
@@ -367,21 +422,10 @@ url: /hypha/getting-started.md
 # Getting started
 
 Hypha is the distributed substrate extracted from peregrin's entity
-plane (org plan PL-005). It is **pre-binary**: the leaf crates are
-landed and tested; the node host (`hypha serve`), the HTTP surface
-(`hypha-http`), and the hub gateway (`hypha-hub`) land in phases
-P2–P3 of the migration plan.
-
-## What exists today
-
-| Crate | What it gives you |
-| --- | --- |
-| `hypha-node-api` | The node↔hub contract — `EntityApi` trait, wire DTOs, `HttpEntityApi` client, `FakeEntityApi` for tests |
-| `hypha-outbox` | Durable per-entity FIFO op queue (SQLite) — writes survive node downtime |
-| `hypha-control` | Pure arbitration — lock registry, takeover decisions, `pick_owner` routing |
-| `hypha-telemetry` | Opt-in OTEL layer over `tracing` (`HYPHA_OTEL_*` env vars) |
-| `hypha-secret` + `-keyring`/`-dotenv` | Secrets port — names, not values |
-| `hypha-service` + `-systemd` | Service-install port + systemd impl |
+plane (org plan PL-005, ADR-0001). It ships two binaries: `hypha`
+(the node host, `hypha serve`) and `hypha-hub` (the multi-node
+gateway). A bare node mounts zero entity kinds — integrations
+register theirs at composition.
 
 ## Build from source
 
@@ -395,6 +439,52 @@ cargo xtask test        # whole suite (nextest if present)
 
 Rust 1.98 (see `rust-toolchain.toml`), edition 2024.
 
+## Install the binaries
+
+There is no `xtask install` — install straight from the workspace:
+
+```bash
+cargo install --path crates/hypha-node --locked   # → ~/.cargo/bin/hypha
+cargo install --path crates/hypha-hub --locked   # → ~/.cargo/bin/hypha-hub
+```
+
+## Smoke run
+
+A bare node needs no kinds and no config — loopback binds may go
+tokenless:
+
+```bash
+hypha serve            # HYPHA_HOST/HYPHA_PORT, default 127.0.0.1:18787
+curl localhost:18787/api/health        # {"ok":true}
+curl localhost:18787/api/node          # node descriptor
+curl localhost:18787/api/entities      # {"entities":[]} — no kinds yet
+```
+
+The hub gateways that node (`HYPHA_NODE_URL` defaults to
+`http://127.0.0.1:18787`):
+
+```bash
+hypha-hub              # HYPHA_HUB_HOST/HYPHA_HUB_PORT, default 127.0.0.1:13000
+curl localhost:13000/api/entity-index  # merged index (one row)
+curl localhost:13000/api/pending-ops   # outbox depth
+```
+
+See [Environment](reference/environment.md) for the full `HYPHA_*`
+surface and [Wire API](reference/wire-api.md) for the routes.
+
+## Upgrading from peregrin — secrets move
+
+`hypha-keyring` stores under the `secret-tool` service attribute
+`"hypha"` (was `"peregrin"`), and `hypha-hub` node credentials live
+under `"hypha-hub"` (was `"peregrin-hub"`). **There is no automatic
+migration** — old entries are orphaned, not moved. After upgrading:
+
+* re-run pairing (`POST /api/pair` flow) or re-store secrets with
+  `secret-tool store --label "hypha: <name>" service hypha name <name>`
+* hub node tokens: either re-pair each node, or let an env
+  `HYPHA_NODES` `@token`/`HYPHA_NODE_TOKEN` re-seed the store on the
+  next boot (`HYPHA_CREDENTIAL_STORE` picks keyring vs file backend)
+
 ## Where next
 
 * [Your first entity](tutorials/first-entity.md) — the entity model
@@ -402,3 +492,102 @@ Rust 1.98 (see `rust-toolchain.toml`), edition 2024.
 * [Architecture](explanation/architecture.md) — planes, nodes, hub.
 * [Boundary](explanation/boundary.md) — what hypha owns vs sepia and
   peregrin.
+
+---
+
+---
+url: /hypha/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
+---
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+Copyright 2014 - 2023 Adobe (http://www.adobe.com/), with Reserved Font Name ‘Source’. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+This license is copied below, and is also available with a FAQ at: http://scripts.sil.org/OFL
+
+***
+
+## SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1. Neither the Font Software nor any of its individual components,
+   in Original or Modified Versions, may be sold by itself.
+
+2. Original or Modified Versions of the Font Software may be bundled,
+   redistributed and/or sold with any software, provided that each copy
+   contains the above copyright notice and this license. These can be
+   included either as stand-alone text files, human-readable headers or
+   in the appropriate machine-readable metadata fields within text or
+   binary files as long as those fields can be easily viewed by the user.
+
+3. No Modified Version of the Font Software may use the Reserved Font
+   Name(s) unless explicit written permission is granted by the corresponding
+   Copyright Holder. This restriction only applies to the primary font name as
+   presented to the users.
+
+4. The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+   Software shall not be used to promote, endorse or advertise any
+   Modified Version, except to acknowledge the contribution(s) of the
+   Copyright Holder(s) and the Author(s) or with their explicit written
+   permission.
+
+5. The Font Software, modified or unmodified, in part or in whole,
+   must be distributed entirely under this license, and must not be
+   distributed under any other license. The requirement for fonts to
+   remain under this license does not apply to any document created
+   using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.

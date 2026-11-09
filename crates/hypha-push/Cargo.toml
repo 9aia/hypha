@@ -1,10 +1,11 @@
 [package]
 name = "hypha-push"
 description = "Web Push notifications over a JSON document store — VAPID keys persist in config; subscriptions prune on 404/410"
-version = "0.0.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 repository.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

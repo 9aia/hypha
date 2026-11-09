@@ -1,10 +1,11 @@
 [package]
 name = "hypha-node-api"
 description = "Node API port + wire DTOs — the hub/client ↔ node contract. NodeApi trait, ureq client, FakeNodeApi stub, rewind selector, convert targets. No leptos, no DOM."
-version = "0.0.0"
+version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 repository.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

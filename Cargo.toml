@@ -19,27 +19,29 @@ members = [
 ]
 
 [workspace.package]
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/9aia/hypha"
+description = "Distributed substrate for agent workloads — entities, ops, snapshots, locks, projections, node host, hub gateway"
 
 [workspace.dependencies]
 # Internal crates.
-hypha-control = { path = "crates/hypha-control" }
-hypha-dotenv = { path = "crates/hypha-dotenv" }
-hypha-http = { path = "crates/hypha-http" }
-hypha-hub = { path = "crates/hypha-hub" }
-hypha-keyring = { path = "crates/hypha-keyring" }
-hypha-node = { path = "crates/hypha-node" }
-hypha-node-api = { path = "crates/hypha-node-api" }
-hypha-outbox = { path = "crates/hypha-outbox" }
-hypha-push = { path = "crates/hypha-push" }
-hypha-secret = { path = "crates/hypha-secret" }
-hypha-service = { path = "crates/hypha-service" }
-hypha-sync = { path = "crates/hypha-sync" }
-hypha-systemd = { path = "crates/hypha-systemd" }
-hypha-telemetry = { path = "crates/hypha-telemetry" }
+hypha-control = { path = "crates/hypha-control", version = "0.1.0" }
+hypha-dotenv = { path = "crates/hypha-dotenv", version = "0.1.0" }
+hypha-http = { path = "crates/hypha-http", version = "0.1.0" }
+hypha-hub = { path = "crates/hypha-hub", version = "0.1.0" }
+hypha-keyring = { path = "crates/hypha-keyring", version = "0.1.0" }
+hypha-node = { path = "crates/hypha-node", version = "0.1.0" }
+hypha-node-api = { path = "crates/hypha-node-api", version = "0.1.0" }
+hypha-outbox = { path = "crates/hypha-outbox", version = "0.1.0" }
+hypha-push = { path = "crates/hypha-push", version = "0.1.0" }
+hypha-secret = { path = "crates/hypha-secret", version = "0.1.0" }
+hypha-service = { path = "crates/hypha-service", version = "0.1.0" }
+hypha-sync = { path = "crates/hypha-sync", version = "0.1.0" }
+hypha-systemd = { path = "crates/hypha-systemd", version = "0.1.0" }
+hypha-telemetry = { path = "crates/hypha-telemetry", version = "0.1.0" }
 
 # External dependencies — pin conservative majors/minors.
 serde = { version = "1.0", features = ["derive"] }

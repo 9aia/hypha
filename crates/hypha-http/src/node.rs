@@ -1,0 +1,114 @@
+//! Stable per-machine node identity — port of `apps/server/src/node.ts`.
+//! The id is minted on first boot and persisted to `$HYPHA_HOME/node.json`;
+//! afterwards it is read back, never regenerated.
+
+use std::path::Path;
+
+use serde::Serialize;
+
+/// Node API protocol revision — bump on breaking changes (the
+/// `protocol` field `GET /api/node` reports).
+pub const PROTOCOL_VERSION: u32 = 1;
+
+/// What `GET /api/node` reports; `version` defaults to the crate stamp.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct NodeIdentity {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+}
+
+/// The package version stamp — the same value `GET /api/node` reports.
+pub const HYPHA_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Mint the `node_<hex16>` id shape TS uses.
+fn mint_id() -> String {
+    format!("node_{}", &uuid::Uuid::new_v4().simple().to_string()[..16])
+}
+
+/// Persist `{id, name}` atomically (tmp + rename) — the same write
+/// `load_node_identity` performs on first boot and `PATCH /api/node`
+/// on rename.
+///
+/// # Errors
+/// `std::io::Error` when the file cannot be written or renamed.
+pub fn save_node_identity(path: &Path, identity: &NodeIdentity) -> std::io::Result<()> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let tmp = path.with_extension(format!("tmp-{}", std::process::id()));
+    let json = serde_json::to_string(&serde_json::json!({
+        "id": identity.id,
+        "name": identity.name,
+    }))
+    .map_err(std::io::Error::other)?;
+    std::fs::write(&tmp, json)?;
+    std::fs::rename(&tmp, path)
+}
+
+/// Load or mint the node identity. A corrupt file regenerates rather
+/// than crashing; the write is atomic (tmp + rename).
+pub fn load_node_identity(path: &Path, name: &str) -> NodeIdentity {
+    if let Ok(raw) = std::fs::read_to_string(path) {
+        if let Ok(serde_json::Value::Object(record)) = serde_json::from_str(&raw) {
+            let id = record.get("id").and_then(|v| v.as_str());
+            if let Some(id) = id.filter(|i| !i.is_empty()) {
+                let name = record
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .filter(|n| !n.is_empty())
+                    .unwrap_or(name);
+                return NodeIdentity {
+                    id: id.to_string(),
+                    name: name.to_string(),
+                    version: HYPHA_VERSION.to_string(),
+                };
+            }
+        }
+        // A corrupt or id-less file falls through to a fresh identity.
+    }
+    let identity = NodeIdentity {
+        id: mint_id(),
+        name: name.to_string(),
+        version: HYPHA_VERSION.to_string(),
+    };
+    let _ = save_node_identity(path, &identity);
+    identity
+}
+
+#[cfg(test)]
+mod cov_tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn save_and_load_arms() {
+        let dir = tempfile::tempdir().unwrap();
+        let id = NodeIdentity {
+            id: "i".into(),
+            name: "n".into(),
+            version: "v".into(),
+        };
+        // Happy path.
+        let p = dir.path().join("deep/nest/node.json");
+        save_node_identity(&p, &id).unwrap();
+        // An unwritable parent (a file, not a dir) → create_dir_all error.
+        let blocker = dir.path().join("file");
+        std::fs::write(&blocker, "x").unwrap();
+        assert!(save_node_identity(&blocker.join("node.json"), &id).is_err());
+        // A stored file with an empty name falls back to the default.
+        std::fs::write(&p, r#"{"id":"keep","name":""}"#).unwrap();
+        let loaded = load_node_identity(&p, "fallback");
+        assert_eq!(loaded.id, "keep");
+        assert_eq!(loaded.name, "fallback");
+        // An object with no usable `id` also mints a fresh identity.
+        std::fs::write(&p, r#"{"id":"","name":"x"}"#).unwrap();
+        let _ = load_node_identity(&p, "n");
+        // A corrupt file → fresh identity minted + persisted.
+        std::fs::write(&p, "garbage").unwrap();
+        let _ = load_node_identity(&p, "n");
+        // `path.parent()` is None for the filesystem root — the
+        // create_dir_all guard's else arm (the write fails anyway).
+        let _ = save_node_identity(Path::new("/"), &id);
+    }
+}

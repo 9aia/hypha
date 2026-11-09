@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/hypha-control",
     "crates/hypha-dotenv",
+    "crates/hypha-http",
     "crates/hypha-keyring",
     "crates/hypha-node-api",
     "crates/hypha-outbox",
@@ -25,6 +26,7 @@ repository = "https://github.com/9aia/hypha"
 # Internal crates.
 hypha-control = { path = "crates/hypha-control" }
 hypha-dotenv = { path = "crates/hypha-dotenv" }
+hypha-http = { path = "crates/hypha-http" }
 hypha-keyring = { path = "crates/hypha-keyring" }
 hypha-node-api = { path = "crates/hypha-node-api" }
 hypha-outbox = { path = "crates/hypha-outbox" }
@@ -52,6 +54,12 @@ tokio = { version = "1", features = [
   "fs",
 ] }
 tokio-util = { version = "0.7", features = ["codec"] }
+axum = "0.8"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+form_urlencoded = "1"
+sha2 = "0.10"
+nix = { version = "0.29", default-features = false, features = ["hostname", "user"] }
 futures = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }

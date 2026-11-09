@@ -19,15 +19,17 @@ ledger).
 | `crates/hypha-outbox` | durable per-entity FIFO op queue (SQLite) for writes while a node is offline |
 | `crates/hypha-sync` | hub-side sync — SQLite entity-index projection + per-node sync engine over `hypha-outbox` (ex-`peregrin-sync`) |
 | `crates/hypha-push` | Web Push notifications over a JSON document store — VAPID keys, subscription prefs, 404/410 prune (ex-`peregrin-push`, sepia-free) |
+| `crates/hypha-http` | substrate HTTP surface (ex-`peregrin-http` split) — `app(HyphaState)` axum router: `/api/entities*` kind planes, `/api/events` feed, node/pairing/auth, `/api/push/*`; kind-agnostic, integrations nest their routes |
 | `crates/hypha-control` | pure arbitration policy — lock registry, takeover, merge/route (`pick_owner`) |
 | `crates/hypha-telemetry` | opt-in OTEL layer over `tracing` (OTLP export, W3C propagation) |
 | `crates/hypha-secret` + `-keyring`/`-dotenv` | secrets port + OS-keyring and dotenv impls |
 | `crates/hypha-service` + `-systemd` | service-install port + systemd impl |
 | `xtask` | check / test / coverage / fmt |
 
-Landed from peregrin's entity plane (PL-005); `hypha-http`,
-`hypha-hub`, and the `hypha`/`hypha-hub` binaries are
-phases P2–P3.
+Landed from peregrin's entity plane (PL-005); `hypha-http` carries
+the substrate half of `peregrin-http` (session routes stay in
+peregrin until P4). `hypha-hub` and the `hypha`/`hypha-hub`
+binaries are phases P3–P4.
 
 ## Boundary
 

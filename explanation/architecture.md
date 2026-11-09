@@ -24,10 +24,10 @@ machine — plus the transport that gets ops and snapshots there.
 ## Planes
 
 - **Entity plane** — this repo: `EntityApi` contract
-  (`hypha-node-api`), node host (`hypha serve`, lands P3), HTTP
-  surface (`hypha-http`, P3), hub gateway (`hypha-hub`, P3),
-  projection (`hypha-sync`, P2), outbox (`hypha-outbox`),
-  arbitration (`hypha-control`), push.
+  (`hypha-node-api`), node host (`hypha serve`, `hypha-node` +
+  `hypha-http`), hub gateway (`hypha-hub`), projection
+  (`hypha-sync`), outbox (`hypha-outbox`), arbitration
+  (`hypha-control`), push.
 - **Integration planes** — one per workload kind, living in the
   workload's own repo: `sepia-peregrin` (sepia repo) registers
   `kind="sepia-session"`; peregrin registers `kind="campaign"`.

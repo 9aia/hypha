@@ -1,1 +1,1 @@
-{"id":"","ws":"ephemeral-awareness","actor":"luis","ts":1794268715,"op":{"op":"release","glob":"crates/hypha-hub/**"}}
+{"id":"","ws":"ephemeral-awareness","actor":"luis","ts":1794268716,"op":{"op":"release","glob":"crates/hypha-outbox/**"}}

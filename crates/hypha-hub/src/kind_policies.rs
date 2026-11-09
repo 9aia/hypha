@@ -8,8 +8,7 @@
 //! entity reads, ungated ops, `entity.delete` — and every kind gets
 //! the inert defaults. Integrations register their policies at
 //! composition through [`crate::hub_state_with`] /
-//! [`crate::hub_state_from_with`] (and the returned
-//! [`crate::HubState::entity_router`] keeps working unchanged).
+//! [`crate::hub_state_from_with`].
 
 use hypha_sync::KindPolicies;
 

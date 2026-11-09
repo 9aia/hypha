@@ -216,10 +216,7 @@ async fn passthrough_unreachable_and_sse() {
     assert_eq!(status, StatusCode::BAD_GATEWAY);
     // Real upstream → SSE frames bridge through.
     let url = stub_upstream();
-    let mut s = state(&url);
-    s.entity_router = Some(Arc::new(|_id| {
-        Some(("http://127.0.0.1:9".into(), Some("t".into())))
-    }));
+    let s = state(&url);
     let app = router(s.clone());
     let res = app.clone().oneshot(get("/api/events?x=1")).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
@@ -429,11 +426,7 @@ async fn hub_state_from_env_arms() {
             _ => None,
         }
     };
-    let state = hypha_hub::hub_state_from(vars, &config).unwrap();
-    // The session router closure resolves through the projection —
-    // invoke it once (unknown id → primary node URL).
-    let router = state.entity_router.as_ref().unwrap();
-    let _ = router("s-ghost");
+    let _state = hypha_hub::hub_state_from(vars, &config).unwrap();
     // `HOME`-fallback arm (no HYPHA_HOME).
     let vars2 = |k: &str| -> Option<std::ffi::OsString> {
         (k == "HOME").then(|| dir.path().join("h2").into_os_string())

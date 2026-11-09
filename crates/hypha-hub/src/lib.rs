@@ -48,9 +48,6 @@ use tracing::Instrument;
 /// Everything the router needs — the node-API port (`EntityApi` is a
 /// trait so tests can stub it) and the upstream address for the
 /// HTTP/SSE bridges.
-/// Entity id → `(url, token)` of the owning node.
-pub type EntityRouter = Arc<dyn Fn(&str) -> Option<(String, Option<String>)> + Send + Sync>;
-
 /// Entity id → `(url, token, upstream path+query)` for the entity's
 /// live event stream — the kind policy's `stream_path` +
 /// `call_params` resolved against the owning node.
@@ -61,10 +58,6 @@ pub struct HubState {
     pub node: Arc<dyn EntityApi>,
     pub node_url: Arc<str>,
     pub node_token: Option<Arc<str>>,
-    /// Multi-node routing — resolves an entity id to its owning
-    /// node's `(url, token)` for entity-scoped proxy calls.
-    /// `None` → everything uses `node_url` (single-node mode).
-    pub entity_router: Option<EntityRouter>,
     /// Live-stream routing — `(url, token, path)` per entity id.
     /// `None` → `/api/entities/{id}/stream` 404s.
     pub stream_router: Option<StreamRouter>,
@@ -110,7 +103,6 @@ impl HubState {
             node,
             node_url: node_url.into(),
             node_token,
-            entity_router: None,
             stream_router: None,
             push: None,
             hub_token: None,
@@ -394,8 +386,6 @@ pub fn hub_state_from_with(
     );
     state.push = Some(push);
     state.hub_token = config.hub_token.clone().map(Into::into);
-    let router_api = Arc::clone(&api);
-    state.entity_router = Some(Arc::new(move |id| router_api.node_url_for(id, None)));
     let stream_api = Arc::clone(&api);
     state.stream_router = Some(Arc::new(move |id| stream_api.stream_upstream(id)));
     Ok(state)

@@ -1,0 +1,15 @@
+[package]
+name = "hypha-config-yaml"
+description = "YAML impl of ConfigFormat — parse/render any serde config model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+[dependencies]
+hypha-config.workspace = true
+serde.workspace = true
+serde_yaml_ng.workspace = true

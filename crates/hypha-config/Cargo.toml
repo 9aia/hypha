@@ -1,0 +1,14 @@
+[package]
+name = "hypha-config"
+description = "Config port — ConfigSource<T>/ConfigFormat generic over the config model, plus the shared file-discovery spec"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde.workspace = true

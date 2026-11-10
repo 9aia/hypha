@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/hypha-config",
+    "crates/hypha-config-file",
+    "crates/hypha-config-toml",
+    "crates/hypha-config-yaml",
     "crates/hypha-control",
     "crates/hypha-dotenv",
     "crates/hypha-http",
@@ -28,6 +32,10 @@ description = "Distributed substrate for agent workloads — entities, ops, snap
 
 [workspace.dependencies]
 # Internal crates.
+hypha-config = { path = "crates/hypha-config", version = "0.1.0" }
+hypha-config-file = { path = "crates/hypha-config-file", version = "0.1.0" }
+hypha-config-toml = { path = "crates/hypha-config-toml", version = "0.1.0" }
+hypha-config-yaml = { path = "crates/hypha-config-yaml", version = "0.1.0" }
 hypha-control = { path = "crates/hypha-control", version = "0.1.0" }
 hypha-dotenv = { path = "crates/hypha-dotenv", version = "0.1.0" }
 hypha-http = { path = "crates/hypha-http", version = "0.1.0" }
@@ -46,6 +54,8 @@ hypha-telemetry = { path = "crates/hypha-telemetry", version = "0.1.0" }
 # External dependencies — pin conservative majors/minors.
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
+serde_yaml_ng = "0.10"
+toml = "0.8"
 thiserror = "2.0"
 async-trait = "0.1"
 tokio = { version = "1", features = [

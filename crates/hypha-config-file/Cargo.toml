@@ -1,0 +1,19 @@
+[package]
+name = "hypha-config-file"
+description = "File impl of ConfigSource — discovery (explicit → env → project → user dir) + extension dispatch to ConfigFormat impls"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+[dependencies]
+hypha-config.workspace = true
+hypha-config-toml.workspace = true
+hypha-config-yaml.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

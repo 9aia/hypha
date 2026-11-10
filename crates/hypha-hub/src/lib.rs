@@ -371,11 +371,21 @@ pub fn hub_state_from_with(
     // One registry, three consumers: the sync engine (diffs, op
     // params), the feed hook (push rules), and the entity API (gating,
     // creates, actors, stream paths).
-    let options = hypha_sync::engine::SyncOptions {
+    // `HYPHA_EPHEMERAL_DEAD_AFTER` (seconds) tunes how long a
+    // self-declared ephemeral node may stay down before its entities
+    // are reaped — CI runners that never come back shouldn't pin
+    // projections forever. Unset/invalid → `SyncOptions` default.
+    let mut options = hypha_sync::engine::SyncOptions {
         on_event: Some(feed_hook(projection.clone(), Arc::clone(&push), &policies)),
         policies: policies.clone(),
         ..hypha_sync::engine::SyncOptions::default()
     };
+    if let Some(secs) = get("HYPHA_EPHEMERAL_DEAD_AFTER")
+        .and_then(|v| v.into_string().ok())
+        .and_then(|v| v.trim().parse::<u64>().ok())
+    {
+        options.ephemeral_dead_after = std::time::Duration::from_secs(secs);
+    }
     let engine = hypha_sync::SyncEngine::spawn(projection, outbox, targets, options);
     // `unwrap_or_else` above guarantees at least the single-node row.
     let upstream = nodes.first().cloned().unwrap_or_default();

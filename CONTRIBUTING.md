@@ -28,7 +28,7 @@ belongs here.
   crate, not a core change.
 - `cargo xtask check` and `cargo xtask test` must stay green.
 - Coverage: `cargo xtask coverage` — cargo-llvm-cov report; the push
-  gate (`scripts/ci.sh` via the peregrin/bupha CI gate) enforces 100%
+  gate (`scripts/ci.sh` via the peregrin ci-gate campaign) enforces 100%
   line coverage.
 - Commits: conventional prefixes (`feat:`/`fix:`/`refactor:`/`docs:`/`chore:`).
 - Never commit secrets — `hypha-secret` takes names, not values.
@@ -40,8 +40,8 @@ Follow Diátaxis: `docs/tutorials/` (learn) · `docs/how-to/` (tasks) ·
 
 ## Releasing
 
-- crates.io publish is dep-ordered via `scripts/release.sh` (bupha
-  watch trigger — register the watch ops-side). First publish is
+- crates.io publish is dep-ordered via `scripts/release.sh` (manual —
+  bupha watch retired, releases are operator-run). First publish is
   manual: tag once, then the script bumps + publishes + tags.
 - crates.io names: `hypha`/`hypha-hub` are taken — packages publish
   under crate names (`hypha-node` ships the `hypha` bin,

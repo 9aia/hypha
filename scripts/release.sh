@@ -67,10 +67,10 @@ for t in $tags; do git tag "$t"; done
 ver="$(git describe --tags --abbrev=0 | sed 's/.*-v//')"
 git push -q origin HEAD:main --tags
 
-# binaries: tag-triggered .github/workflows/release.yml builds the
-# release tarballs on `hypha-v*`/`v*` tags — push one to ship:
+# binaries: releases are manual — GHA workflows were removed org-wide.
+# This script bumps, publishes, and tags; the `dist build` path below
+# produces release tarballs (host arch). To ship:
 #   git tag hypha-v${ver} && git push origin hypha-v${ver}
-# The local `dist build` path below is the ops fallback (host arch).
 if command -v dist >/dev/null && command -v gh >/dev/null; then
     dist build --output-format=json > /tmp/dist-manifest.json 2>&1 || true
     for f in target/distrib/*; do

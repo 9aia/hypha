@@ -1,7 +1,7 @@
 +++
 id = "ADR-0002"
 title = "hypha-config — generic config loading for any 9aia project"
-status = "open"
+status = "in-progress"
 created = "2026-11-10"
 priority = "medium"
 labels = ["config", "hypha"]

@@ -66,6 +66,7 @@ impl FakeEntityApi {
             node_info: NodeInfoDto {
                 id: "node".into(),
                 name: "local".into(),
+                capabilities: vec!["entities".into(), "events".into()],
             },
             nodes: vec![NodeStatusDto {
                 id: "node".into(),
@@ -185,6 +186,7 @@ impl EntityApi for FakeEntityApi {
         self.fail(NodeInfoDto {
             id: self.node_info.id.clone(),
             name: name.to_string(),
+            capabilities: self.node_info.capabilities.clone(),
         })
     }
     async fn node_status(&self) -> Result<Vec<NodeStatusDto>, String> {

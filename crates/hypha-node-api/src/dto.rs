@@ -95,6 +95,12 @@ pub struct NodeInfoDto {
     pub id: String,
     #[serde(default)]
     pub name: String,
+    /// The node's self-reported capability tags (`/api/node`
+    /// `capabilities`) — integration-defined labels like `"sessions"`,
+    /// `"ephemeral"`, or fleet runner labels (`"runner:linux"`).
+    /// Empty when the node doesn't advertise any.
+    #[serde(default)]
+    pub capabilities: Vec<String>,
 }
 
 /// Per-node health row — `node_status` on a hub (projection row), or a
@@ -121,6 +127,12 @@ pub struct NodeStatusDto {
     /// reaps once it stays down past its threshold.
     #[serde(default)]
     pub ephemeral: bool,
+    /// The node's full self-reported `/api/node` `capabilities` list —
+    /// the fleet-routing surface (`runs_on` matchers read this). Empty
+    /// for registered-but-never-synced nodes and bare nodes that
+    /// don't advertise capabilities.
+    #[serde(default)]
+    pub capabilities: Vec<String>,
 }
 
 /// `POST /api/push/subscribe` — the keys sub-object.

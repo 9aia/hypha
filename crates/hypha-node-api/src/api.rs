@@ -392,16 +392,21 @@ impl EntityApi for HttpEntityApi {
                 Ok(mut res) if res.status().is_success() => {
                     // The descriptor's `capabilities` carry the
                     // node's self-reported lifecycle flags
-                    // (`"ephemeral"` for disposable nodes) — surface
-                    // them on the synthesized row.
-                    let ephemeral = res
+                    // (`"ephemeral"` for disposable nodes) and fleet
+                    // labels — surface the full list on the
+                    // synthesized row.
+                    let capabilities = res
                         .body_mut()
                         .read_to_string()
                         .ok()
                         .and_then(|body| serde_json::from_str::<serde_json::Value>(&body).ok())
                         .and_then(|v| v.get("capabilities").cloned())
                         .and_then(|c| c.as_array().cloned())
-                        .is_some_and(|caps| caps.iter().any(|c| c.as_str() == Some("ephemeral")));
+                        .unwrap_or_default()
+                        .iter()
+                        .filter_map(|c| c.as_str().map(str::to_string))
+                        .collect::<Vec<_>>();
+                    let ephemeral = capabilities.iter().any(|c| c == "ephemeral");
                     Ok(vec![NodeStatusDto {
                         id: "node".into(),
                         url: api.base.clone(),
@@ -410,6 +415,7 @@ impl EntityApi for HttpEntityApi {
                         last_seen_at: None,
                         down_since: None,
                         ephemeral,
+                        capabilities,
                     }])
                 }
                 Ok(res) => Err(error_of(res, "node status")),
@@ -421,6 +427,7 @@ impl EntityApi for HttpEntityApi {
                     last_seen_at: Some(e),
                     down_since: None,
                     ephemeral: false,
+                    capabilities: Vec::new(),
                 }]),
             }
         })

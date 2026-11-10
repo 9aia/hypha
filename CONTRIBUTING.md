@@ -27,8 +27,9 @@ belongs here.
 - New capability = a new `hypha-{port}` / `hypha-{port}-{impl}`
   crate, not a core change.
 - `cargo xtask check` and `cargo xtask test` must stay green.
-- Coverage: `cargo xtask coverage` — cargo-llvm-cov report; CI gates
-  on 100% line coverage.
+- Coverage: `cargo xtask coverage` — cargo-llvm-cov report; the push
+  gate (`scripts/ci.sh` via the peregrin/bupha CI gate) enforces 100%
+  line coverage.
 - Commits: conventional prefixes (`feat:`/`fix:`/`refactor:`/`docs:`/`chore:`).
 - Never commit secrets — `hypha-secret` takes names, not values.
 
@@ -45,8 +46,8 @@ Follow Diátaxis: `docs/tutorials/` (learn) · `docs/how-to/` (tasks) ·
 - crates.io names: `hypha`/`hypha-hub` are taken — packages publish
   under crate names (`hypha-node` ships the `hypha` bin,
   `cargo install hypha-node`).
-- Release binaries: push a `v*`/`hypha-v*` tag —
-  `.github/workflows/release.yml` builds
+- Release binaries: run `scripts/release.sh` manually (there is no
+  release CI — releases are operator-driven). It builds
   `hypha-<target>.tar.gz` (linux x86_64, macOS aarch64/x86_64)
   carrying the `hypha` + `hypha-hub` bins.
 - Org publish order for the substrate stack: **hypha → sepia →

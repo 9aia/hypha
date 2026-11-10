@@ -631,7 +631,7 @@ impl EntityApi for SyncEntityApi {
             return Err(format!("entity kind {kind:?} not registered"));
         };
         policy.validate_create(init)?;
-        let (_node_id, client) = self.scoped_client(node)?;
+        let (node_id, client) = self.scoped_client(node)?;
         let body = serde_json::json!({"kind": kind, "indexDoc": init});
         let res =
             tokio::task::spawn_blocking(move || client.send_json("POST", "/api/entities", &body))
@@ -642,6 +642,20 @@ impl EntityApi for SyncEntityApi {
             .get("id")
             .and_then(Value::as_str)
             .ok_or_else(|| "create returned no entity id".to_string())?;
+        // The node's create response IS its entity doc (`{id, kind,
+        // indexDoc, …}`) — project it immediately so ops submitted
+        // right after the create route without waiting for the next
+        // listing/resync. The next `apply_listing` reconciles it with
+        // the node's authoritative doc either way.
+        if res.is_object() {
+            let projection = self.projection();
+            let node_id = node_id.clone();
+            let doc = res.clone();
+            tokio::task::spawn_blocking(move || projection.upsert_entity(&node_id, &doc))
+                .await
+                .map_err(join_err)?
+                .map_err(proj_err)?;
+        }
         Ok(CreateResultDto {
             id: id.to_string(),
             entity: None,
@@ -794,6 +808,7 @@ impl EntityApi for SyncEntityApi {
                     last_seen_at: n.last_seen_at,
                     down_since: n.down_since,
                     ephemeral: n.ephemeral,
+                    capabilities: n.capabilities,
                 })
                 .collect();
             // Registered-but-never-synced nodes still get a row.
@@ -807,6 +822,7 @@ impl EntityApi for SyncEntityApi {
                         last_seen_at: None,
                         down_since: None,
                         ephemeral: false,
+                        capabilities: Vec::new(),
                     });
                 }
             }

@@ -35,6 +35,7 @@ Hub (`hypha-hub`, `hypha_hub::HubConfig` + `hub_state_from_with`):
 | `HYPHA_NODES` | `id=url[@token];…` multi-node registry |
 | `HYPHA_HOME` | hub data under `<home>/hub/` (projection, outbox, push, credentials) |
 | `HYPHA_CREDENTIAL_STORE` | `auto`/`keyring`/`file` node-token backend |
+| `HYPHA_EPHEMERAL_DEAD_AFTER` | seconds; ephemeral-node reap window (default 300) |
 
 Both binaries (`hypha serve`, `hypha-hub`) initialize the same OTEL
 layer — the `HYPHA_OTEL_*`/`OTEL_EXPORTER_OTLP_*` vars above apply to

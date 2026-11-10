@@ -583,15 +583,29 @@ async fn connect_once(
     if let Err(e) = shared.projection.apply_listing(&node.id, &docs) {
         tracing::warn!(node = %node.id, "projection apply_listing failed: {e}");
     }
-    // Self-reported lifecycle: `/api/node`'s `capabilities` carry
-    // `"ephemeral"` for disposable nodes (CI runners). Best-effort —
-    // a node that doesn't answer keeps its previous flag.
+    // Self-reported lifecycle + fleet labels: `/api/node`'s
+    // `capabilities` carry `"ephemeral"` for disposable nodes (CI
+    // runners) plus integration-defined tags (`"runner:linux"`, …)
+    // schedulers match `runs_on` requirements against. Best-effort —
+    // a node that doesn't answer keeps its previous values.
     if let Ok(info) = blocking(client.clone(), |c| c.get_json("/api/node")).await {
-        let ephemeral = info
+        let capabilities: Vec<String> = info
             .get("capabilities")
             .and_then(Value::as_array)
-            .is_some_and(|caps| caps.iter().any(|c| c.as_str() == Some("ephemeral")));
+            .map(|caps| {
+                caps.iter()
+                    .filter_map(|c| c.as_str().map(str::to_string))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let ephemeral = capabilities.iter().any(|c| c == "ephemeral");
         if let Err(e) = shared.projection.set_node_ephemeral(&node.id, ephemeral) {
+            tracing::warn!(node = %node.id, "failed to record node capabilities: {e}");
+        }
+        if let Err(e) = shared
+            .projection
+            .set_node_capabilities(&node.id, &capabilities)
+        {
             tracing::warn!(node = %node.id, "failed to record node capabilities: {e}");
         }
     }
@@ -1191,9 +1205,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn connect_once_records_self_reported_ephemeral() {
         // `/api/node` capabilities carry `"ephemeral"` → the node row
-        // records it; without the tag the flag stays false.
+        // records it; without the tag the flag stays false. The full
+        // capability list persists alongside for fleet routing.
         for (caps, want) in [
-            (r#"["entities","ephemeral"]"#, true),
+            (r#"["entities","ephemeral","runner:linux"]"#, true),
             (r#"["entities","events"]"#, false),
         ] {
             let info = format!(r#"{{"id":"n","capabilities":{caps}}}"#);
@@ -1220,6 +1235,11 @@ mod tests {
             let row = shared.projection.node("n").unwrap().unwrap();
             assert_eq!(row.ephemeral, want, "capabilities {caps}");
             assert_eq!(row.status, NodeStatus::Up);
+            let want_caps: Vec<String> = serde_json::from_str::<Vec<String>>(caps)
+                .unwrap()
+                .into_iter()
+                .collect();
+            assert_eq!(row.capabilities, want_caps, "capabilities {caps}");
         }
     }
 

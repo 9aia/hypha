@@ -117,6 +117,11 @@ pub struct NodeRow {
     /// stays down past the engine's reap threshold its projected
     /// entities are dropped and its queued writes dead-letter.
     pub ephemeral: bool,
+    /// The node's full self-reported `/api/node` `capabilities` list —
+    /// refreshed on every successful `/api/node` read during a connect
+    /// cycle. The fleet-routing surface: integrations match `runs_on`
+    /// requirements against these tags.
+    pub capabilities: Vec<String>,
     /// RFC 3339 — when the node entered `down`, cleared on `up`.
     /// `None` while `unknown`/`up` or before the first observed
     /// failure.
@@ -160,7 +165,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     last_seen_at TEXT,
     status TEXT NOT NULL DEFAULT 'unknown',
     ephemeral INTEGER NOT NULL DEFAULT 0,
-    down_since TEXT
+    down_since TEXT,
+    capabilities_json TEXT NOT NULL DEFAULT '[]'
 );
 CREATE TABLE IF NOT EXISTS entities (
     node_id TEXT NOT NULL,
@@ -375,7 +381,7 @@ impl ProjectionStore {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut stmt =
-            conn.prepare("SELECT id, url, label, last_seen_at, status, ephemeral, down_since FROM nodes WHERE id=?")?;
+            conn.prepare("SELECT id, url, label, last_seen_at, status, ephemeral, down_since, capabilities_json FROM nodes WHERE id=?")?;
         let mut rows = stmt.query_map(params![id], node_row)?;
         match rows.next() {
             Some(row) => Ok(Some(row?)),
@@ -393,7 +399,7 @@ impl ProjectionStore {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut stmt = conn.prepare(
-            "SELECT id, url, label, last_seen_at, status, ephemeral, down_since FROM nodes ORDER BY id",
+            "SELECT id, url, label, last_seen_at, status, ephemeral, down_since, capabilities_json FROM nodes ORDER BY id",
         )?;
         let rows = stmt
             .query_map([], node_row)?
@@ -446,6 +452,29 @@ impl ProjectionStore {
         conn.execute(
             "UPDATE nodes SET ephemeral=? WHERE id=?",
             params![i64::from(ephemeral), id],
+        )?;
+        Ok(())
+    }
+
+    /// Record the node's full self-reported capability list —
+    /// refreshed alongside [`set_node_ephemeral`](Self::set_node_ephemeral)
+    /// on every successful `/api/node` read during a connect cycle.
+    /// Stored as a JSON array; unreadable payloads degrade to `[]`.
+    ///
+    /// # Errors
+    /// On sqlite/serde failure.
+    pub fn set_node_capabilities(
+        &self,
+        id: &str,
+        capabilities: &[String],
+    ) -> Result<(), SyncError> {
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        conn.execute(
+            "UPDATE nodes SET capabilities_json=? WHERE id=?",
+            params![serde_json::to_string(capabilities)?, id],
         )?;
         Ok(())
     }
@@ -718,6 +747,7 @@ impl ProjectionStore {
 }
 
 fn node_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NodeRow> {
+    let capabilities_json: String = row.get("capabilities_json")?;
     Ok(NodeRow {
         id: row.get("id")?,
         url: row.get("url")?,
@@ -725,6 +755,7 @@ fn node_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<NodeRow> {
         last_seen_at: row.get("last_seen_at")?,
         status: NodeStatus::parse(&row.get::<_, String>("status")?),
         ephemeral: row.get::<_, i64>("ephemeral")? != 0,
+        capabilities: serde_json::from_str(&capabilities_json).unwrap_or_default(),
         down_since: row.get("down_since")?,
     })
 }
@@ -745,6 +776,12 @@ fn migrate_nodes_schema(conn: &Connection) -> Result<(), SyncError> {
     }
     if !names.iter().any(|n| n == "down_since") {
         conn.execute("ALTER TABLE nodes ADD COLUMN down_since TEXT", [])?;
+    }
+    if !names.iter().any(|n| n == "capabilities_json") {
+        conn.execute(
+            "ALTER TABLE nodes ADD COLUMN capabilities_json TEXT NOT NULL DEFAULT '[]'",
+            [],
+        )?;
     }
     Ok(())
 }
@@ -775,4 +812,39 @@ pub struct NodeWrite {
     /// Seconds until the queued write expires (dead-letters); `None`
     /// never expires.
     pub ttl_seconds: Option<i64>,
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn node_capabilities_roundtrip() {
+        let proj = ProjectionStore::in_memory().unwrap();
+        proj.upsert_node(&NodeRef {
+            id: "n1".into(),
+            url: "http://x".into(),
+            label: "n1".into(),
+        })
+        .unwrap();
+        // Fresh rows start empty.
+        assert_eq!(
+            proj.node("n1").unwrap().unwrap().capabilities,
+            Vec::<String>::new()
+        );
+        proj.set_node_capabilities("n1", &["entities".to_string(), "runner:linux".to_string()])
+            .unwrap();
+        let row = proj.node("n1").unwrap().unwrap();
+        assert_eq!(row.capabilities, ["entities", "runner:linux"]);
+        // nodes() carries the same list.
+        assert_eq!(proj.nodes().unwrap()[0].capabilities.len(), 2);
+        // Refresh replaces wholesale.
+        proj.set_node_capabilities("n1", &["ephemeral".to_string()])
+            .unwrap();
+        assert_eq!(
+            proj.node("n1").unwrap().unwrap().capabilities,
+            ["ephemeral"]
+        );
+    }
 }

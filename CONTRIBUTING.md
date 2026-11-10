@@ -41,7 +41,7 @@ Follow Diátaxis: `docs/tutorials/` (learn) · `docs/how-to/` (tasks) ·
 ## Releasing
 
 - crates.io publish is dep-ordered via `scripts/release.sh` (manual —
-  bupha watch retired, releases are operator-run). First publish is
+  releases are operator-run). First publish is
   manual: tag once, then the script bumps + publishes + tags.
 - crates.io names: `hypha`/`hypha-hub` are taken — packages publish
   under crate names (`hypha-node` ships the `hypha` bin,

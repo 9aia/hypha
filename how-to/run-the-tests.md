@@ -7,9 +7,11 @@ cargo xtask coverage  # cargo llvm-cov HTML report → target/llvm-cov/html
 cargo xtask fmt       # apply formatting
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, nextest + doctests, and a
-coverage job that **gates on 100% line coverage** — any `DA:<line>,0`
-in the lcov report fails the build.
+The push gate (`scripts/ci.sh`, run by the peregrin/bupha CI gate on
+every push) runs lint, nextest + doctests, and a coverage check that
+**gates on 100% line coverage** — any `DA:<line>,0` in the lcov report
+fails the build. There is no GitHub Actions CI; run the same commands
+locally before pushing.
 
 Scope a single crate while iterating:
 

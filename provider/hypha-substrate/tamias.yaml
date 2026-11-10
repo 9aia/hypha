@@ -1,0 +1,63 @@
+# hypha-substrate — the hypha node + hub daemons as a tamias provider
+# package (PL-008 T8-6, second-provider genericity proof — after
+# ci-gate's peregrin-bundle). `tamias install <ref>` fetches this dir;
+# `tamias deploy hypha-substrate` renders one systemd unit per
+# `services[]` entry below (`hypha-substrate-node.service`,
+# `hypha-substrate-hub.service`).
+#
+# No content driver is needed: `type: files` is the built-in kind and
+# the `provider:` block is rendered natively by `tamias deploy` — the
+# same path ci-gate exercises, minus the kind driver. Both daemons are
+# pure env-driven services (every knob a HYPHA_* var), so the whole
+# runtime spec is manifest data: services, env_file, workdir.
+name: hypha-substrate
+version: "0.1.0"
+type: files
+description: >-
+  Hypha substrate daemons — `hypha serve` (entity-plane node host,
+  /api/entities + /api/events + pairing/auth/push) and `hypha-hub`
+  (aggregation gateway: merged /api/entities surface, SSE proxies,
+  node credentials). Loopback binds by default; non-loopback requires
+  HYPHA_TOKEN / HYPHA_HUB_TOKEN (set in the env file, never inline).
+
+provider:
+  # Unit names are `<provider>-<service>` — the hyphenated provider
+  # name keeps them clear of any hand-made `hypha*.service` units and
+  # of a peregrin-hosted hub.
+  name: hypha-substrate
+  services:
+    # The node host: zero integration kinds — the bare substrate.
+    # HYPHA_PORT defaults to 18787; 18788 keeps this provider clear of
+    # a node already running on the default. HYPHA_HOME stays
+    # operator-set (env file) so this provider never shares
+    # ~/.local/share/hypha/node.json identity with a live node.
+    - name: node
+      exec: hypha serve
+      env_file: "~/.config/hypha-substrate/env"
+      env:
+        HYPHA_HOST: "127.0.0.1"
+        HYPHA_PORT: "18788"
+        HYPHA_NAME: hypha-substrate
+      workdir: "~"
+      restart: on-failure
+    # The aggregation gateway. HYPHA_HUB_PORT defaults to 13000; 13001
+    # avoids a live hub. HYPHA_NODE_URL points at the node service
+    # above; HYPHA_NODES (multi-node) and tokens live in the env file.
+    - name: hub
+      exec: hypha-hub
+      env_file: "~/.config/hypha-substrate/env"
+      env:
+        HYPHA_HUB_HOST: "127.0.0.1"
+        HYPHA_HUB_PORT: "13001"
+        HYPHA_NODE_URL: "http://127.0.0.1:18788"
+      workdir: "~"
+      restart: on-failure
+  # No ingress: the hub is a loopback-bound gateway, not a public
+  # endpoint — ProviderIngress requires a public_url and there is no
+  # honest one to declare. Forge hooks / tunnels are a deploy-driver
+  # concern anyway (T8-5).
+  verbs: [run, logs]
+  # `/api/health` sits ahead of the auth gate on the node — a single
+  # probe covers the substrate; the hub proxies /api/* to the node.
+  health:
+    cmd: "curl -fsS http://127.0.0.1:18788/api/health"

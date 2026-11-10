@@ -7,8 +7,9 @@ cargo xtask coverage  # cargo llvm-cov HTML report → target/llvm-cov/html
 cargo xtask fmt       # apply formatting
 ```
 
-The push gate (`scripts/ci.sh`, run by the peregrin/bupha CI gate on
-every push) runs lint, nextest + doctests, and a coverage check that
+The push gate (`scripts/ci.sh`, run by the peregrin ci-gate
+campaign on every push; bupha watch is retired) runs lint, nextest
++ doctests, and a coverage check that
 **gates on 100% line coverage** — any `DA:<line>,0` in the lcov report
 fails the build. There is no GitHub Actions CI; run the same commands
 locally before pushing.

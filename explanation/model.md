@@ -38,5 +38,5 @@ end-to-end; resume semantics are the integration's
 The distributed abilities — sync, arbitration, outbox, transfer,
 pairing — are orchestration-domain but workload-agnostic. Shaping
 them around sessions was the mistake ADR-0091 corrected; shaping
-them around *entities* is what lets bupha jobs, sturn claims, or
+them around *entities* is what lets CI jobs, sturn claims, or
 cicada schedules become kinds without touching this repo.

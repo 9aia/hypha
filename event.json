@@ -1,1 +1,1 @@
-{"id":"","ws":"hypha","actor":"luis","ts":1794282228,"op":{"op":"claim","glob":"docs/**","ttl_secs":3600}}
+{"id":"","ws":"hypha","actor":"luis","ts":1794282715,"op":{"op":"presence","status":"left"}}

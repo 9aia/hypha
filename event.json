@@ -1,1 +1,1 @@
-{"id":"","ws":"hypha-config","actor":"luis","ts":1794354212,"op":{"op":"claim","glob":"AGENTS.md","ttl_secs":3600}}
+{"id":"","ws":"hypha-config","actor":"luis","ts":1794354605,"op":{"op":"presence","status":"left"}}

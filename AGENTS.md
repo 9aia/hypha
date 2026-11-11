@@ -22,7 +22,6 @@ Ports-and-adapters. Crates are named `hypha-<port>` (trait) and
 | `crates/hypha-node` | node host library — `Env` → `HyphaState` → `hypha_http::app`; integrations register planes via `HyphaState::with_kind`, then `serve_state`. Ships the `hypha` bin (`hypha serve`, zero kinds) |
 | `crates/hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi` over the sync engine, merged `/api/entities*` surface, SSE/passthrough proxies, push store, node credentials (keyring→file). Policy-injected: boots an empty `KindPolicies`, integrations supply theirs via `hub_state_with`/`hub_state_from_with`. Ships the `hypha-hub` bin |
 | `crates/hypha-control` | pure arbitration policy — lock registry, takeover, merge/route (`pick_owner`) |
-| `crates/hypha-config` + `-file`/`-toml`/`-yaml` | config port — `ConfigSource<T>`/`ConfigFormat<T>` generic over the serde model; file discovery (explicit → `$<NAME>_CONFIG` → `./<name>.*` → `~/.config/<name>/`, YAML-preferred) + toml/yaml parse/render impls (P-015) |
 | `crates/hypha-telemetry` | opt-in OTEL layer over `tracing` (OTLP export, W3C propagation) |
 | `crates/hypha-secret` + `-keyring`/`-dotenv` | secrets port + OS-keyring and dotenv impls |
 | `crates/hypha-service` + `-systemd` | service-install port + systemd impl |
@@ -43,6 +42,9 @@ It never names an integration's type. Neighbors own theirs:
 - **peregrin** — orchestration: campaigns/drivers/loaders;
   `kind="campaign"` via `peregrin-node`'s entity plane.
 - **tamias** — content distribution/provisioning/service lifecycle.
+- **scarab** — config/template expertise; generic config loading
+  lives there (`scarab-config*`), not in hypha — hypha stays
+  distributed substrate (the P-015 crates moved to `9aia/scarab`).
 
 Op kinds are namespaced (`sepia.prompt`, `campaign.start`,
 `entity.delete`); snapshot bytes are opaque end-to-end.

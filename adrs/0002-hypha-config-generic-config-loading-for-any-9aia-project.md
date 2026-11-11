@@ -5,7 +5,6 @@ status = "done"
 created = "2026-11-10"
 priority = "med"
 labels = ["config", "hypha"]
-links = ["P-015"]
 +++
 
 ## Context

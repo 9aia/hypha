@@ -9,6 +9,7 @@ use axum::body::Body;
 use axum::extract::{Path, Request, State};
 use axum::http::{Method, StatusCode};
 use axum::response::{IntoResponse, Json, Response};
+use hypha_node_api::api::OpResult;
 use hypha_node_api::dto::EntityOp;
 use serde_json::{Value, json};
 
@@ -137,8 +138,15 @@ pub async fn ops(
         kind: kind.to_string(),
         payload: body.get("payload").cloned().unwrap_or_else(|| json!({})),
     };
-    match state.node.submit_op(&id, &op).await {
-        Ok(()) => json_response(json!({ "ok": true }), StatusCode::ACCEPTED),
+    match state.node.submit_op_result(&id, &op).await {
+        // The node's op response body passes through verbatim
+        // (`ci.claim` → `{claimed, fence, job}`, …); queued writes
+        // carry no body yet.
+        Ok(OpResult::Applied(Some(body))) => json_response(body, StatusCode::ACCEPTED),
+        Ok(OpResult::Applied(None)) => json_response(json!({ "ok": true }), StatusCode::ACCEPTED),
+        Ok(OpResult::Queued) => {
+            json_response(json!({ "ok": true, "queued": true }), StatusCode::ACCEPTED)
+        }
         Err(e) => api_err(&e),
     }
 }

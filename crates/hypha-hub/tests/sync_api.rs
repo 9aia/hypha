@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use hypha_hub::credentials::{FileCredentials, NodeCredentials};
 use hypha_hub::sync_api::{HubNode, SyncEntityApi, parse_nodes, resolve_node_tokens};
-use hypha_node_api::api::EntityApi;
+use hypha_node_api::api::{EntityApi, OpResult};
 use hypha_node_api::dto::EntityOp;
 use hypha_sync::{NodeTarget, SyncEngine, SyncHandle, SyncOptions};
 use serde_json::{Value, json};
@@ -190,9 +190,51 @@ async fn canned(
         (_, "/api/sessions/import") => {
             json!({"id":"i1","kind":"sepia-session","agent":"devin"})
         }
+        // Op responses are integration-shaped — `ci.claim`-style
+        // bodies must reach `submit_op_result` verbatim.
+        ("POST", _) if path.ends_with("/ops") => {
+            json!({"claimed":true,"fence":7,"job":{"id":"j1"}})
+        }
         _ => json!({}),
     };
     axum::Json(body).into_response()
+}
+
+/// A node that stays up: `/api/events` is an open (never-ending) SSE
+/// stream and `GET /api/entities` lists `s1`, so the sync loop's
+/// connect cycle completes and marks the node `Up`. Everything else
+/// falls through to the canned responder.
+async fn serve_live_node() -> String {
+    async fn events() -> axum::response::Response {
+        use axum::response::IntoResponse;
+        (
+            [(axum::http::header::CONTENT_TYPE, "text/event-stream")],
+            axum::body::Body::from_stream(futures::stream::pending::<
+                Result<axum::body::Bytes, std::io::Error>,
+            >()),
+        )
+            .into_response()
+    }
+    async fn entities() -> axum::Json<Value> {
+        axum::Json(json!({
+            "entities": [{
+                "id": "s1", "kind": "sepia-session",
+                "indexDoc": {"id": "s1", "title": "Alpha", "cwd": "/w", "agent": "devin"},
+                "updatedAt": "2024-01-01T00:00:00Z",
+            }],
+        }))
+    }
+    let app = axum::Router::new()
+        .route("/api/events", axum::routing::get(events))
+        .route("/api/entities", axum::routing::get(entities))
+        .route("/api/{*rest}", axum::routing::any(canned))
+        .with_state(Canned::default());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
+    });
+    format!("http://{addr}")
 }
 
 async fn serve_canned(m: Canned) -> (Canned, String) {
@@ -339,15 +381,18 @@ async fn submit_op_goes_direct_when_up_queue_when_down() {
     seed_entity(&projection, "n1", "s1", "Alpha");
     // Node is registered but has never synced → status "unknown"/down →
     // a `sepia.prompt` op queues instead of posting.
-    api.submit_op(
-        "s1",
-        &EntityOp {
-            kind: "sepia.prompt".into(),
-            payload: json!({"text":"hi"}),
-        },
-    )
-    .await
-    .unwrap();
+    let result = api
+        .submit_op_result(
+            "s1",
+            &EntityOp {
+                kind: "sepia.prompt".into(),
+                payload: json!({"text":"hi"}),
+            },
+        )
+        .await
+        .unwrap();
+    // Queued writes carry no node response yet.
+    assert_eq!(result, OpResult::Queued);
     let pending = api.pending_ops().await.unwrap();
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].kind, "sepia.prompt");
@@ -357,6 +402,43 @@ async fn submit_op_goes_direct_when_up_queue_when_down() {
         mock.calls().iter().all(|c| !c.contains("prompt")),
         "queued op must not post — calls: {:?}",
         mock.calls()
+    );
+}
+
+#[tokio::test]
+async fn submit_op_result_returns_the_node_body_when_up() {
+    let url = serve_live_node().await;
+    let (api, projection) = api_against(vec![hub_node("n1", &url)]);
+    seed_entity(&projection, "n1", "s1", "Alpha");
+    // Wait for the sync loop's connect cycle to mark the node up.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let up = projection
+            .node("n1")
+            .unwrap()
+            .is_some_and(|row| row.status == hypha_sync::NodeStatus::Up);
+        if up {
+            break;
+        }
+        assert!(std::time::Instant::now() < deadline, "node never came up");
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    let result = api
+        .submit_op_result(
+            "s1",
+            &EntityOp {
+                kind: "sepia.prompt".into(),
+                payload: json!({"text":"hi"}),
+            },
+        )
+        .await
+        .unwrap();
+    // The node's op response body reaches the caller verbatim.
+    assert_eq!(
+        result,
+        OpResult::Applied(Some(json!({
+            "claimed": true, "fence": 7, "job": {"id": "j1"}
+        })))
     );
 }
 

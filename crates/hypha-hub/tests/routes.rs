@@ -17,15 +17,15 @@ use serde_json::Value;
 use tower::ServiceExt;
 
 fn state(node_url: &str) -> HubState {
+    state_with_api(node_url, FakeEntityApi::seeded())
+}
+
+fn state_with_api(node_url: &str, api: FakeEntityApi) -> HubState {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("push.json");
     std::mem::forget(dir); // the store reads lazily — keep the dir alive
     let push = hypha_push::PushStore::open(hypha_push::JsonDocStore::open(&path));
-    let mut s = HubState::new(
-        FakeEntityApi::seeded().shared() as Arc<dyn EntityApi>,
-        node_url,
-        None,
-    );
+    let mut s = HubState::new(api.shared() as Arc<dyn EntityApi>, node_url, None);
     s.push = Some(Arc::new(push));
     s
 }
@@ -542,6 +542,35 @@ async fn entity_ops_submit_and_delete() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn entity_ops_return_the_op_response_body() {
+    // The op's own response (`ci.claim` → `{claimed, fence, job}`)
+    // passes through the hub surface verbatim instead of a bare
+    // `{ok: true}`.
+    let api = FakeEntityApi::seeded().with_op_result(hypha_node_api::api::OpResult::Applied(Some(
+        serde_json::json!({
+            "claimed": true, "fence": 7
+        }),
+    )));
+    let app = hypha_hub::router(state_with_api("http://127.0.0.1:1", api));
+    let (status, body) = call(
+        &app,
+        Request::builder()
+            .method("POST")
+            .uri("/api/entities/s1/ops")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                r#"{"kind":"ci.claim","payload":{"worker":"w"}}"#,
+            ))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::ACCEPTED, "{body}");
+    let v: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(v["claimed"], true);
+    assert_eq!(v["fence"], 7);
 }
 
 #[tokio::test]

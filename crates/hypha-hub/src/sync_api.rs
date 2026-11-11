@@ -25,7 +25,7 @@ use hypha_sync::{
 };
 
 use crate::credentials::NodeCredentials;
-use hypha_node_api::api::EntityApi;
+use hypha_node_api::api::{EntityApi, OpResult};
 use hypha_node_api::dto::{
     CreateResultDto, EntityDto, EntityIndexDto, EntityOp, NodeInfoDto, NodeStatusDto, PendingOpDto,
     PushSubscriptionDto,
@@ -437,7 +437,8 @@ impl SyncEntityApi {
 
     /// An entity op through the engine — posts direct when the node is
     /// up, enqueues (per-entity FIFO) when down. Gated ops consult the
-    /// lock book first.
+    /// lock book first. The engine's `Applied` body is the node's op
+    /// response — surfaced verbatim via [`OpResult`].
     async fn submit(
         &self,
         id: &str,
@@ -445,7 +446,7 @@ impl SyncEntityApi {
         op: &str,
         policy: OpKind,
         payload: Value,
-    ) -> Result<(), String> {
+    ) -> Result<OpResult, String> {
         let (node_id, row) = {
             let registry = self.registry();
             let (node_id, _node, row) = owner_row(&self.projection(), id, kind, &registry.nodes)?;
@@ -456,7 +457,8 @@ impl SyncEntityApi {
         if op == "entity.delete" || self.policies.for_op(op).is_some_and(|p| p.op_gated(op)) {
             self.ensure_writable(&node_id, id, &row)?;
         }
-        self.engine
+        let outcome = self
+            .engine
             .submit_op(NodeWrite {
                 node_id: node_id.clone(),
                 entity_id: id.to_string(),
@@ -478,7 +480,12 @@ impl SyncEntityApi {
                 locks.release(&key, &holder);
             }
         }
-        Ok(())
+        Ok(match outcome {
+            hypha_sync::SubmitOutcome::Applied(body) => {
+                OpResult::Applied((!body.is_null()).then_some(body))
+            }
+            hypha_sync::SubmitOutcome::Queued(_) => OpResult::Queued,
+        })
     }
 
     /// Persist a minted credential and start using it: store → registry
@@ -663,6 +670,10 @@ impl EntityApi for SyncEntityApi {
     }
 
     async fn submit_op(&self, id: &str, op: &EntityOp) -> Result<(), String> {
+        self.submit_op_result(id, op).await.map(|_| ())
+    }
+
+    async fn submit_op_result(&self, id: &str, op: &EntityOp) -> Result<OpResult, String> {
         // Turn-shaped ops dead-letter on replay failure; the owning
         // kind policy classifies (meta-shaped ones retry —
         // last-writer-wins is safe for overlay state). Unregistered
@@ -684,6 +695,7 @@ impl EntityApi for SyncEntityApi {
             serde_json::json!({}),
         )
         .await
+        .map(|_| ())
     }
 
     async fn snapshot_export(&self, id: &str) -> Result<Value, String> {

@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use crate::api::EntityApi;
+use crate::api::{EntityApi, OpResult};
 use crate::dto::{
     CreateResultDto, EntityDto, EntityIndexDto, EntityOp, NodeInfoDto, NodeStatusDto, PendingOpDto,
     PushSubscriptionDto,
@@ -22,6 +22,7 @@ pub struct FakeEntityApi {
     node_info: NodeInfoDto,
     nodes: Vec<NodeStatusDto>,
     pending: Vec<PendingOpDto>,
+    op_result: OpResult,
     error: Option<String>,
 }
 
@@ -77,6 +78,7 @@ impl FakeEntityApi {
                 ..NodeStatusDto::default()
             }],
             pending: Vec::new(),
+            op_result: OpResult::Applied(Some(json!({ "ok": true }))),
             error: None,
         }
     }
@@ -92,6 +94,13 @@ impl FakeEntityApi {
     #[must_use]
     pub fn with_pending(mut self, pending: Vec<PendingOpDto>) -> Self {
         self.pending = pending;
+        self
+    }
+
+    /// The result [`EntityApi::submit_op_result`] reports.
+    #[must_use]
+    pub fn with_op_result(mut self, op_result: OpResult) -> Self {
+        self.op_result = op_result;
         self
     }
 
@@ -149,8 +158,11 @@ impl EntityApi for FakeEntityApi {
             }),
         })
     }
-    async fn submit_op(&self, _id: &str, _op: &EntityOp) -> Result<(), String> {
-        self.fail(())
+    async fn submit_op(&self, id: &str, op: &EntityOp) -> Result<(), String> {
+        self.submit_op_result(id, op).await.map(|_| ())
+    }
+    async fn submit_op_result(&self, _id: &str, _op: &EntityOp) -> Result<OpResult, String> {
+        self.fail(self.op_result.clone())
     }
     async fn delete_entity(&self, _id: &str) -> Result<(), String> {
         self.fail(())

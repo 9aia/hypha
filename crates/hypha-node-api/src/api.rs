@@ -12,6 +12,20 @@ use crate::dto::{
     PushSubscriptionDto,
 };
 
+/// What [`EntityApi::submit_op_result`] reports for a successful op.
+#[derive(Clone, Debug, PartialEq)]
+pub enum OpResult {
+    /// The op reached the owning node and was applied — `body` is the
+    /// plane's parsed JSON response (`None` when the response carried
+    /// no JSON body). Op response bodies are integration-defined
+    /// (`ci.claim` → `{claimed, fence, job}`, …) and opaque to hypha.
+    Applied(Option<Value>),
+    /// The hub queued the op in its durable outbox — it replays when
+    /// the owning node reconnects, so no node response exists yet.
+    /// Direct node connections never produce this.
+    Queued,
+}
+
 /// Port to the node's entity plane — implemented by [`HttpEntityApi`]
 /// for direct connections and by the hub's `SyncEntityApi` (merged
 /// index + durable outbox) for multi-node deployments. Deliberately
@@ -36,6 +50,15 @@ pub trait EntityApi: Send + Sync + 'static {
     /// `POST /api/entities/{id}/ops` — submit an op; queues in the
     /// outbox when the owning node is down.
     async fn submit_op(&self, id: &str, op: &EntityOp) -> Result<(), String>;
+    /// [`EntityApi::submit_op`] plus the op's response: the node's
+    /// parsed JSON body on `Applied`, or `Queued` when a hub parked the
+    /// write in its outbox. The default impl discards the body — impls
+    /// that can surface it (both shipped ones do) should override.
+    async fn submit_op_result(&self, id: &str, op: &EntityOp) -> Result<OpResult, String> {
+        self.submit_op(id, op)
+            .await
+            .map(|()| OpResult::Applied(None))
+    }
     /// `DELETE /api/entities/{id}`.
     async fn delete_entity(&self, id: &str) -> Result<(), String>;
     /// `GET /api/entities/{id}/snapshot` — the entity's snapshot bytes
@@ -277,16 +300,22 @@ impl EntityApi for HttpEntityApi {
     }
 
     async fn submit_op(&self, id: &str, op: &EntityOp) -> Result<(), String> {
+        self.submit_op_result(id, op).await.map(|_| ())
+    }
+
+    async fn submit_op_result(&self, id: &str, op: &EntityOp) -> Result<OpResult, String> {
         let api = self.clone();
         let id = url_encode(id);
         let body = serde_json::to_value(op).map_err(err_msg)?;
         tokio::task::spawn_blocking(move || {
-            let res = api.send_json("POST", &format!("/api/entities/{id}/ops"), &body)?;
-            if res.status().is_success() {
-                Ok(())
-            } else {
-                Err(error_of(res, "submit op"))
+            let mut res = api.send_json("POST", &format!("/api/entities/{id}/ops"), &body)?;
+            if !res.status().is_success() {
+                return Err(error_of(res, "submit op"));
             }
+            // The op's response body is integration-defined JSON —
+            // empty or non-JSON bodies surface as `None`.
+            let text = res.body_mut().read_to_string().unwrap_or_default();
+            Ok(OpResult::Applied(serde_json::from_str(&text).ok()))
         })
         .await
         .map_err(err_msg)?
@@ -572,5 +601,122 @@ mod tests {
         assert_eq!(node_query(Some("tower")), "?node=tower");
         assert_eq!(kind_query(None), "");
         assert_eq!(kind_query(Some("sepia-session")), "?kind=sepia-session");
+    }
+
+    /// Canned-HTTP stub: answers every accepted connection with one
+    /// fixed response (same pattern as `hypha-sync`'s client tests).
+    fn canned_server(status: &str, body: &str) -> String {
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let res = format!(
+            "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        );
+        std::thread::spawn(move || {
+            use std::io::{Read, Write};
+            while let Ok((mut conn, _)) = listener.accept() {
+                // Drain the request first — closing with unread bytes
+                // RSTs and can take the response down with it.
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 4096];
+                let header_end = loop {
+                    match conn.read(&mut tmp) {
+                        Ok(0) | Err(_) => break None,
+                        Ok(n) => {
+                            buf.extend_from_slice(&tmp[..n]);
+                            if let Some(pos) = find_subslice(&buf, b"\r\n\r\n") {
+                                break Some(pos + 4);
+                            }
+                        }
+                    }
+                };
+                let Some(end) = header_end else { continue };
+                let head = String::from_utf8_lossy(&buf[..end]).into_owned();
+                let content_len = head
+                    .lines()
+                    .find_map(|l| {
+                        l.to_ascii_lowercase()
+                            .strip_prefix("content-length:")
+                            .map(str::to_string)
+                    })
+                    .and_then(|v| v.trim().parse::<usize>().ok())
+                    .unwrap_or(0);
+                while buf.len() < end + content_len {
+                    match conn.read(&mut tmp) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => buf.extend_from_slice(&tmp[..n]),
+                    }
+                }
+                let _ = conn.write_all(res.as_bytes());
+            }
+        });
+        format!("http://127.0.0.1:{port}")
+    }
+
+    fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+        haystack.windows(needle.len()).position(|w| w == needle)
+    }
+
+    fn claim_op() -> EntityOp {
+        EntityOp {
+            kind: "ci.claim".into(),
+            payload: serde_json::json!({"worker": "w1"}),
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn submit_op_result_returns_the_op_body() {
+        let api = HttpEntityApi::new(
+            canned_server("200 OK", r#"{"claimed":true,"fence":7,"job":{"id":"j1"}}"#),
+            None,
+        );
+        let res = api
+            .submit_op_result("ci:k:abc:1", &claim_op())
+            .await
+            .unwrap();
+        assert_eq!(
+            res,
+            OpResult::Applied(Some(serde_json::json!({
+                "claimed": true, "fence": 7, "job": {"id": "j1"}
+            })))
+        );
+        // The compat wrapper still discards the body.
+        api.submit_op("ci:k:abc:1", &claim_op()).await.unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn submit_op_result_empty_and_non_json_bodies() {
+        let api = HttpEntityApi::new(canned_server("202 Accepted", ""), None);
+        let res = api.submit_op_result("e1", &claim_op()).await.unwrap();
+        assert_eq!(res, OpResult::Applied(None));
+        let api = HttpEntityApi::new(canned_server("200 OK", "not json"), None);
+        let res = api.submit_op_result("e1", &claim_op()).await.unwrap();
+        assert_eq!(res, OpResult::Applied(None));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn submit_op_result_surfaces_http_errors() {
+        let api = HttpEntityApi::new(
+            canned_server("409 Conflict", r#"{"error":"held by pid:9"}"#),
+            None,
+        );
+        let err = api.submit_op_result("e1", &claim_op()).await.unwrap_err();
+        assert!(err.contains("submit op"), "{err}");
+        assert!(err.contains("409"), "{err}");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn fake_entity_api_op_result() {
+        use crate::testing::FakeEntityApi;
+        let api = FakeEntityApi::seeded();
+        let res = api.submit_op_result("s1", &claim_op()).await.unwrap();
+        assert_eq!(
+            res,
+            OpResult::Applied(Some(serde_json::json!({"ok": true})))
+        );
+        let api = FakeEntityApi::seeded().with_op_result(OpResult::Queued);
+        let res = api.submit_op_result("s1", &claim_op()).await.unwrap();
+        assert_eq!(res, OpResult::Queued);
+        api.submit_op("s1", &claim_op()).await.unwrap();
     }
 }

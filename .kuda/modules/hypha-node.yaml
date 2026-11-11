@@ -1,0 +1,65 @@
+name: hypha-node
+path: crates/hypha-node/Cargo.toml
+purpose: Node host — HyphaState composition + serve() for the substrate daemon
+api:
+- name: Cli
+  kind: type
+  file: crates/hypha-node/src/bin/hypha.rs
+  line: 19
+  module: hypha-node
+- name: Command
+  kind: type
+  file: crates/hypha-node/src/bin/hypha.rs
+  line: 25
+  module: hypha-node
+- name: hypha-node
+  kind: module
+  file: crates/hypha-node/Cargo.toml
+  line: 1
+  module: hypha-node
+- name: main
+  kind: function
+  file: crates/hypha-node/src/bin/hypha.rs
+  line: 31
+  module: hypha-node
+- name: serve
+  kind: function
+  file: crates/hypha-node/src/lib.rs
+  line: 31
+  module: hypha-node
+- name: serve_state
+  kind: function
+  file: crates/hypha-node/src/lib.rs
+  line: 40
+  module: hypha-node
+- name: state
+  kind: function
+  file: crates/hypha-node/src/lib.rs
+  line: 21
+  module: hypha-node
+deps:
+- axum
+- clap
+- hypha-http
+- hypha-telemetry
+- tokio
+- tracing
+- hypha-http
+- clap
+notes: ''
+verify:
+- crates/hypha-node/Cargo.toml
+- crates/hypha-node/src/bin/hypha.rs
+- crates/hypha-node/src/lib.rs
+provenance:
+  files:
+  - crates/hypha-node/Cargo.toml
+  - crates/hypha-node/src/bin/hypha.rs
+  - crates/hypha-node/src/lib.rs
+  hashes:
+  - 4e2e0616cf09a1048fddfc493d6b9d5907533de1
+  - aad0bbc6f5706e61cb401495e1e107ef0d32212a
+  - 2512239197bf19a746efebfbab98edcad72bcfe0
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

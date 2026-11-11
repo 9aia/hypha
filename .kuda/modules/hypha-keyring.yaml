@@ -1,0 +1,59 @@
+name: hypha-keyring
+path: crates/hypha-keyring/Cargo.toml
+purpose: OS-keyring impl of the secret port
+api:
+- name: KeyringSecrets
+  kind: type
+  file: crates/hypha-keyring/src/lib.rs
+  line: 9
+  module: hypha-keyring
+- name: default
+  kind: function
+  file: crates/hypha-keyring/src/lib.rs
+  line: 15
+  module: hypha-keyring
+- name: get
+  kind: function
+  file: crates/hypha-keyring/src/lib.rs
+  line: 29
+  module: hypha-keyring
+- name: get_and_set
+  kind: function
+  file: crates/hypha-keyring/tests/keyring.rs
+  line: 6
+  module: hypha-keyring
+- name: hypha-keyring
+  kind: module
+  file: crates/hypha-keyring/Cargo.toml
+  line: 1
+  module: hypha-keyring
+- name: set
+  kind: function
+  file: crates/hypha-keyring/src/lib.rs
+  line: 43
+  module: hypha-keyring
+- name: valid_name
+  kind: function
+  file: crates/hypha-keyring/src/lib.rs
+  line: 24
+  module: hypha-keyring
+deps:
+- hypha-secret
+- hypha-secret
+notes: ''
+verify:
+- crates/hypha-keyring/Cargo.toml
+- crates/hypha-keyring/src/lib.rs
+- crates/hypha-keyring/tests/keyring.rs
+provenance:
+  files:
+  - crates/hypha-keyring/Cargo.toml
+  - crates/hypha-keyring/src/lib.rs
+  - crates/hypha-keyring/tests/keyring.rs
+  hashes:
+  - 46cec4a109552d28aad492f0ab6503fd00bfc877
+  - 422da09babf82e2437eddd8b7dc9856e90b1762a
+  - 9e4ab6d4cd1927512ee7a86aecaa8c64023fcd8c
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

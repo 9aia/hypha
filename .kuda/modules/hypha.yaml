@@ -1,0 +1,21 @@
+name: hypha
+path: Cargo.toml
+purpose: The distributed substrate for agent workloads — entities, ops,
+api:
+- name: hypha
+  kind: module
+  file: Cargo.toml
+  line: 1
+  module: hypha
+deps: []
+notes: ''
+verify:
+- Cargo.toml
+provenance:
+  files:
+  - Cargo.toml
+  hashes:
+  - ba5e5cabddd9856c841d67530d72211aa8af6a5c
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

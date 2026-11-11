@@ -1,0 +1,236 @@
+name: hypha-push
+path: crates/hypha-push/Cargo.toml
+purpose: Web Push notifications over a JSON document store — VAPID keys persist in config; subscriptions prune on 404/410
+api:
+- name: JsonDocInner
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 86
+  module: hypha-push
+- name: JsonDocStore
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 82
+  module: hypha-push
+- name: Kind
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 252
+  module: hypha-push
+- name: PushBackend
+  kind: trait
+  file: crates/hypha-push/src/lib.rs
+  line: 69
+  module: hypha-push
+- name: PushError
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 57
+  module: hypha-push
+- name: PushPrefs
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 20
+  module: hypha-push
+- name: PushStore
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 168
+  module: hypha-push
+- name: PushSubscription
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 35
+  module: hypha-push
+- name: SubscriptionKeys
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 43
+  module: hypha-push
+- name: VapidKeys
+  kind: type
+  file: crates/hypha-push/src/lib.rs
+  line: 49
+  module: hypha-push
+- name: config
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 124
+  module: hypha-push
+- name: default_true
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 29
+  module: hypha-push
+- name: flush
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 109
+  module: hypha-push
+- name: generate_vapid
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 266
+  module: hypha-push
+- name: hypha-push
+  kind: module
+  file: crates/hypha-push/Cargo.toml
+  line: 1
+  module: hypha-push
+- name: list
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 197
+  module: hypha-push
+- name: open
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 95
+  module: hypha-push
+- name: open
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 178
+  module: hypha-push
+- name: prefs_default_to_opted_in
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 109
+  module: hypha-push
+- name: public_key
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 193
+  module: hypha-push
+- name: read_subs
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 154
+  module: hypha-push
+- name: remove
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 209
+  module: hypha-push
+- name: send
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 221
+  module: hypha-push
+- name: send_attempts_build_failures_are_kept
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 182
+  module: hypha-push
+- name: send_delivers_to_live_endpoint
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 172
+  module: hypha-push
+- name: send_is_a_noop_with_no_matching_prefs
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 97
+  module: hypha-push
+- name: send_one
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 282
+  module: hypha-push
+- name: send_prunes_expired_endpoints_and_counts_failures
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 156
+  module: hypha-push
+- name: sendable_sub
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 117
+  module: hypha-push
+- name: set_config
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 137
+  module: hypha-push
+- name: store
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 6
+  module: hypha-push
+- name: stub_push_server
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 139
+  module: hypha-push
+- name: sub
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 12
+  module: hypha-push
+- name: subscriptions_persist_to_config_document
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 57
+  module: hypha-push
+- name: tag
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 258
+  module: hypha-push
+- name: unknown_top_level_keys_survive_writes
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 75
+  module: hypha-push
+- name: upsert
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 202
+  module: hypha-push
+- name: upsert_replaces_by_endpoint_and_remove_works
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 35
+  module: hypha-push
+- name: vapid_keys_persist_across_reopen
+  kind: function
+  file: crates/hypha-push/tests/push.rs
+  line: 24
+  module: hypha-push
+- name: write_subs
+  kind: function
+  file: crates/hypha-push/src/lib.rs
+  line: 162
+  module: hypha-push
+deps:
+- base64
+- futures
+- p256
+- rand
+- serde
+- serde_json
+- thiserror
+- web-push
+- tempfile
+- serde_json
+- base64
+- serde
+- thiserror
+- web_push
+notes: ''
+verify:
+- crates/hypha-push/Cargo.toml
+- crates/hypha-push/src/lib.rs
+- crates/hypha-push/tests/push.rs
+provenance:
+  files:
+  - crates/hypha-push/Cargo.toml
+  - crates/hypha-push/src/lib.rs
+  - crates/hypha-push/tests/push.rs
+  hashes:
+  - adc2ec675d3c1f213345e02197d09f88b1ab9da4
+  - 164c4c31555c060cef10b57427812d768b83e5de
+  - 93758f27959df959e534b16e9904c33f97d5307b
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

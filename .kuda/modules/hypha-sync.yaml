@@ -1,0 +1,254 @@
+name: hypha-sync
+path: crates/hypha-sync/Cargo.toml
+purpose: Hub-side sync layer — SQLite projection of paired nodes' entity indexes + outbox drain on reconnect
+api:
+- name: ClientConfig
+  kind: type
+  file: crates/hypha-sync/src/client.rs
+  line: 29
+  module: hypha-sync
+- name: Cmd
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 209
+  module: hypha-sync
+- name: CycleEnd
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 447
+  module: hypha-sync
+- name: DiffTombstone
+  kind: type
+  file: crates/hypha-sync/src/kind.rs
+  line: 42
+  module: hypha-sync
+- name: EventStream
+  kind: type
+  file: crates/hypha-sync/src/client.rs
+  line: 435
+  module: hypha-sync
+- name: Failing
+  kind: type
+  file: crates/hypha-sync/src/client.rs
+  line: 778
+  module: hypha-sync
+- name: FeedEvent
+  kind: type
+  file: crates/hypha-sync/src/client.rs
+  line: 404
+  module: hypha-sync
+- name: FeedHook
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 29
+  module: hypha-sync
+- name: IndexColumns
+  kind: type
+  file: crates/hypha-sync/src/kind.rs
+  line: 27
+  module: hypha-sync
+- name: IndexedEntity
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 136
+  module: hypha-sync
+- name: KindPolicies
+  kind: type
+  file: crates/hypha-sync/src/kind.rs
+  line: 179
+  module: hypha-sync
+- name: KindPolicy
+  kind: trait
+  file: crates/hypha-sync/src/kind.rs
+  line: 77
+  module: hypha-sync
+- name: MAX_ERROR_BODY
+  kind: const
+  file: crates/hypha-sync/src/client.rs
+  line: 103
+  module: hypha-sync
+- name: NodeClient
+  kind: type
+  file: crates/hypha-sync/src/client.rs
+  line: 90
+  module: hypha-sync
+- name: NodeError
+  kind: type
+  file: crates/hypha-sync/src/client.rs
+  line: 54
+  module: hypha-sync
+- name: NodeRef
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 65
+  module: hypha-sync
+- name: NodeRow
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 108
+  module: hypha-sync
+- name: NodeStatus
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 77
+  module: hypha-sync
+- name: NodeTarget
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 105
+  module: hypha-sync
+- name: NodeWrite
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 793
+  module: hypha-sync
+- name: Notice
+  kind: type
+  file: crates/hypha-sync/src/kind.rs
+  line: 63
+  module: hypha-sync
+- name: NoticeKind
+  kind: type
+  file: crates/hypha-sync/src/kind.rs
+  line: 53
+  module: hypha-sync
+- name: PatchStatus
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 152
+  module: hypha-sync
+- name: ProjectionStore
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 291
+  module: hypha-sync
+- name: PumpMsg
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 150
+  module: hypha-sync
+- name: SCHEMA
+  kind: const
+  file: crates/hypha-sync/src/lib.rs
+  line: 160
+  module: hypha-sync
+- name: Shared
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 137
+  module: hypha-sync
+- name: SubmitOutcome
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 127
+  module: hypha-sync
+- name: SyncEngine
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 162
+  module: hypha-sync
+- name: SyncError
+  kind: type
+  file: crates/hypha-sync/src/lib.rs
+  line: 42
+  module: hypha-sync
+- name: SyncHandle
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 215
+  module: hypha-sync
+- name: SyncOptions
+  kind: type
+  file: crates/hypha-sync/src/engine.rs
+  line: 33
+  module: hypha-sync
+- name: TestSepiaPolicy
+  kind: type
+  file: crates/hypha-sync/tests/projection.rs
+  line: 15
+  module: hypha-sync
+- name: TimeoutThen
+  kind: type
+  file: crates/hypha-sync/src/client.rs
+  line: 614
+  module: hypha-sync
+- name: active_pumps
+  kind: function
+  file: crates/hypha-sync/src/engine.rs
+  line: 235
+  module: hypha-sync
+- name: add_node
+  kind: function
+  file: crates/hypha-sync/src/engine.rs
+  line: 253
+  module: hypha-sync
+- name: apply_event
+  kind: function
+  file: crates/hypha-sync/src/engine.rs
+  line: 831
+  module: hypha-sync
+- name: apply_listing
+  kind: function
+  file: crates/hypha-sync/src/lib.rs
+  line: 502
+  module: hypha-sync
+- name: apply_listing_summary_without_updated_at
+  kind: function
+  file: crates/hypha-sync/tests/projection.rs
+  line: 239
+  module: hypha-sync
+- name: apply_patch
+  kind: function
+  file: crates/hypha-sync/src/lib.rs
+  line: 552
+  module: hypha-sync
+api_omitted: 166
+deps:
+- hypha-outbox
+- rusqlite
+- serde
+- serde_json
+- thiserror
+- time
+- tokio
+- tokio-util
+- tracing
+- ureq
+- tempfile
+- serde_json
+- ureq
+- rusqlite
+- serde
+- client
+- engine
+- hypha-outbox
+- kind
+notes: ''
+verify:
+- crates/hypha-sync/Cargo.toml
+- crates/hypha-sync/src/client.rs
+- crates/hypha-sync/src/engine.rs
+- crates/hypha-sync/src/kind.rs
+- crates/hypha-sync/src/lib.rs
+- crates/hypha-sync/tests/client.rs
+- crates/hypha-sync/tests/projection.rs
+provenance:
+  files:
+  - crates/hypha-sync/Cargo.toml
+  - crates/hypha-sync/src/client.rs
+  - crates/hypha-sync/src/engine.rs
+  - crates/hypha-sync/src/kind.rs
+  - crates/hypha-sync/src/lib.rs
+  - crates/hypha-sync/tests/client.rs
+  - crates/hypha-sync/tests/projection.rs
+  hashes:
+  - 1b5dc7314986fe0c4a7eac50ddebc10fab3acfc8
+  - 715341a4ab3716caa83d5c400bfc1adfa258731f
+  - 1329d346a4c97ca45aa33a80922fce2bd7c9a964
+  - 26215828dcd344c1110f1a930c0a73a1e9df1ce9
+  - 0a4534cd723cb8b81b505f58abcead23301f3a1b
+  - 6a6d0c556cd61d21e7c5bd1afae7adc44ffb21bc
+  - b1ca0edf6474b85b91fa0c0b21897c95a110193a
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

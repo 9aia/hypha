@@ -1,0 +1,236 @@
+name: hypha-outbox
+path: crates/hypha-outbox/Cargo.toml
+purpose: Durable per-entity FIFO outbox for writes queued while a node is offline
+api:
+- name: Envelope
+  kind: type
+  file: crates/hypha-outbox/src/lib.rs
+  line: 424
+  module: hypha-outbox
+- name: EnvelopeOwned
+  kind: type
+  file: crates/hypha-outbox/src/lib.rs
+  line: 477
+  module: hypha-outbox
+- name: OpKind
+  kind: type
+  file: crates/hypha-outbox/src/lib.rs
+  line: 69
+  module: hypha-outbox
+- name: Outbox
+  kind: type
+  file: crates/hypha-outbox/src/lib.rs
+  line: 131
+  module: hypha-outbox
+- name: OutboxEntry
+  kind: type
+  file: crates/hypha-outbox/src/lib.rs
+  line: 109
+  module: hypha-outbox
+- name: OutboxError
+  kind: type
+  file: crates/hypha-outbox/src/lib.rs
+  line: 57
+  module: hypha-outbox
+- name: SCHEMA
+  kind: const
+  file: crates/hypha-outbox/src/lib.rs
+  line: 36
+  module: hypha-outbox
+- name: Status
+  kind: type
+  file: crates/hypha-outbox/src/lib.rs
+  line: 80
+  module: hypha-outbox
+- name: as_str
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 88
+  module: hypha-outbox
+- name: busy_db_surfaces_sqlite_errors
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 499
+  module: hypha-outbox
+- name: by_id_locked
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 399
+  module: hypha-outbox
+- name: by_key_locked
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 390
+  module: hypha-outbox
+- name: corrupt_rows_surface_decode_errors
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 572
+  module: hypha-outbox
+- name: cov_tests
+  kind: module
+  file: crates/hypha-outbox/src/lib.rs
+  line: 483
+  module: hypha-outbox
+- name: dead_letter_node
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 361
+  module: hypha-outbox
+- name: dead_letter_node_moves_only_that_nodes_pending
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 607
+  module: hypha-outbox
+- name: dead_letters
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 340
+  module: hypha-outbox
+- name: enqueue
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 176
+  module: hypha-outbox
+- name: enqueue_is_idempotent_on_key
+  kind: function
+  file: crates/hypha-outbox/tests/outbox.rs
+  line: 7
+  module: hypha-outbox
+- name: expire_locked
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 409
+  module: hypha-outbox
+- name: expire_sweep_dead_letters
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 691
+  module: hypha-outbox
+- name: hypha-outbox
+  kind: module
+  file: crates/hypha-outbox/Cargo.toml
+  line: 1
+  module: hypha-outbox
+- name: in_memory
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 157
+  module: hypha-outbox
+- name: legacy_session_id_schema_migrates
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 529
+  module: hypha-outbox
+- name: mark_done
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 283
+  module: hypha-outbox
+- name: mark_failed
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 298
+  module: hypha-outbox
+- name: mark_in_flight
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 267
+  module: hypha-outbox
+- name: metadata_ops_retry_until_budget
+  kind: function
+  file: crates/hypha-outbox/tests/outbox.rs
+  line: 71
+  module: hypha-outbox
+- name: migrate_legacy_schema
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 433
+  module: hypha-outbox
+- name: missing_entry_returns_none
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 654
+  module: hypha-outbox
+- name: next_seq_locked
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 444
+  module: hypha-outbox
+- name: next_seq_query_error_surfaces
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 663
+  module: hypha-outbox
+- name: open
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 138
+  module: hypha-outbox
+- name: parse
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 97
+  module: hypha-outbox
+- name: peek
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 246
+  module: hypha-outbox
+- name: pending_for_node
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 321
+  module: hypha-outbox
+- name: per_session_fifo
+  kind: function
+  file: crates/hypha-outbox/tests/outbox.rs
+  line: 36
+  module: hypha-outbox
+- name: persists_across_reopen
+  kind: function
+  file: crates/hypha-outbox/tests/outbox.rs
+  line: 115
+  module: hypha-outbox
+- name: restrict_file_perms
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 26
+  module: hypha-outbox
+- name: restrict_file_perms
+  kind: function
+  file: crates/hypha-outbox/src/lib.rs
+  line: 34
+  module: hypha-outbox
+api_omitted: 5
+deps:
+- rusqlite
+- serde
+- serde_json
+- thiserror
+- time
+- tracing
+- uuid
+- tempfile
+- serde_json
+- rusqlite
+- serde
+- thiserror
+- time
+notes: ''
+verify:
+- crates/hypha-outbox/Cargo.toml
+- crates/hypha-outbox/src/lib.rs
+- crates/hypha-outbox/tests/outbox.rs
+provenance:
+  files:
+  - crates/hypha-outbox/Cargo.toml
+  - crates/hypha-outbox/src/lib.rs
+  - crates/hypha-outbox/tests/outbox.rs
+  hashes:
+  - 817f581000eae7852aaab238fdb69658b571a2fb
+  - c180dc3006956515465404c61b6b12b56de556f3
+  - dfb17219fc77a47a485502d6bb5c5dc6a7ef1167
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

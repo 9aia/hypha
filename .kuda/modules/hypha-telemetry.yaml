@@ -1,0 +1,231 @@
+name: hypha-telemetry
+path: crates/hypha-telemetry/Cargo.toml
+purpose: Opt-in OpenTelemetry layer over the tracing stack — OTLP export, W3C context propagation
+api:
+- name: DEFAULT_SERVICE_NAME
+  kind: const
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 50
+  module: hypha-telemetry
+- name: ENV_OTEL_ENDPOINT
+  kind: const
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 42
+  module: hypha-telemetry
+- name: ENV_OTEL_SERVICE_NAME
+  kind: const
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 44
+  module: hypha-telemetry
+- name: HeaderMapExtractor
+  kind: type
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 229
+  module: hypha-telemetry
+- name: OTEL_ENDPOINT
+  kind: const
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 46
+  module: hypha-telemetry
+- name: OTEL_SERVICE_NAME
+  kind: const
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 48
+  module: hypha-telemetry
+- name: OTEL_TRACES_ENDPOINT
+  kind: const
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 47
+  module: hypha-telemetry
+- name: TRACES_PATH
+  kind: const
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 53
+  module: hypha-telemetry
+- name: TelemetryConfig
+  kind: type
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 58
+  module: hypha-telemetry
+- name: TelemetryGuard
+  kind: type
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 132
+  module: hypha-telemetry
+- name: VecInjector
+  kind: type
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 219
+  module: hypha-telemetry
+- name: build_provider
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 111
+  module: hypha-telemetry
+- name: config_from
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 82
+  module: hypha-telemetry
+- name: disabled_guard_is_inert
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 366
+  module: hypha-telemetry
+- name: disabled_without_env
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 305
+  module: hypha-telemetry
+- name: drop
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 153
+  module: hypha-telemetry
+- name: drop_logs_shutdown_errors
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 426
+  module: hypha-telemetry
+- name: enabled
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 107
+  module: hypha-telemetry
+- name: enabled_mirrors_config_presence
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 373
+  module: hypha-telemetry
+- name: extractor_enumerates_keys
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 481
+  module: hypha-telemetry
+- name: force_flush
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 145
+  module: hypha-telemetry
+- name: get
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 232
+  module: hypha-telemetry
+- name: hypha-telemetry
+  kind: module
+  file: crates/hypha-telemetry/Cargo.toml
+  line: 1
+  module: hypha-telemetry
+- name: hypha_endpoint_appends_traces_path
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 314
+  module: hypha-telemetry
+- name: hypha_endpoint_verbatim_when_path_present
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 325
+  module: hypha-telemetry
+- name: init
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 174
+  module: hypha-telemetry
+- name: init_installs_tracing_only_when_unconfigured
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 394
+  module: hypha-telemetry
+- name: init_with
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 183
+  module: hypha-telemetry
+- name: init_with_builds_the_otlp_layer
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 405
+  module: hypha-telemetry
+- name: init_with_degrades_on_a_bad_endpoint
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 416
+  module: hypha-telemetry
+- name: is_enabled
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 138
+  module: hypha-telemetry
+- name: keys
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 236
+  module: hypha-telemetry
+- name: lookup
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 296
+  module: hypha-telemetry
+- name: nonempty
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 65
+  module: hypha-telemetry
+- name: propagation_round_trip
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 441
+  module: hypha-telemetry
+- name: provider_builds_and_guard_flushes
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 379
+  module: hypha-telemetry
+- name: record_response
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 279
+  module: hypha-telemetry
+- name: server_span
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 257
+  module: hypha-telemetry
+- name: service_name_precedence
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 348
+  module: hypha-telemetry
+- name: set
+  kind: function
+  file: crates/hypha-telemetry/src/lib.rs
+  line: 222
+  module: hypha-telemetry
+api_omitted: 4
+deps:
+- http
+- opentelemetry
+- opentelemetry-otlp
+- opentelemetry_sdk
+- tracing
+- tracing-opentelemetry
+- tracing-subscriber
+- opentelemetry
+- tracing_opentelemetry
+- tracing_subscriber
+- opentelemetry_otlp
+notes: ''
+verify:
+- crates/hypha-telemetry/Cargo.toml
+- crates/hypha-telemetry/src/lib.rs
+provenance:
+  files:
+  - crates/hypha-telemetry/Cargo.toml
+  - crates/hypha-telemetry/src/lib.rs
+  hashes:
+  - 67cb4fbb952e882cb330403520287ae84fed11fb
+  - 46bba2002326920453e65b73797fe1f5c58a6033
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

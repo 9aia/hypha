@@ -1,0 +1,282 @@
+name: hypha-hub
+path: crates/hypha-hub/Cargo.toml
+purpose: Entity-API gateway — multi-node sync engine, HTTP/SSE bridges, push, auth
+api:
+- name: CAP
+  kind: const
+  file: crates/hypha-hub/src/entity_routes.rs
+  line: 232
+  module: hypha-hub
+- name: Canned
+  kind: type
+  file: crates/hypha-hub/tests/sync_api.rs
+  line: 120
+  module: hypha-hub
+- name: Canned
+  kind: type
+  file: crates/hypha-hub/tests/transfer.rs
+  line: 23
+  module: hypha-hub
+- name: FILE_NAME
+  kind: const
+  file: crates/hypha-hub/src/credentials.rs
+  line: 28
+  module: hypha-hub
+- name: FailBuilder
+  kind: type
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 182
+  module: hypha-hub
+- name: FailCred
+  kind: type
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 166
+  module: hypha-hub
+- name: FakeCreds
+  kind: type
+  file: crates/hypha-hub/tests/sync_api.rs
+  line: 279
+  module: hypha-hub
+- name: FileCredentials
+  kind: type
+  file: crates/hypha-hub/src/credentials.rs
+  line: 127
+  module: hypha-hub
+- name: HUB_ACTOR
+  kind: const
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 182
+  module: hypha-hub
+- name: HubConfig
+  kind: type
+  file: crates/hypha-hub/src/lib.rs
+  line: 127
+  module: hypha-hub
+- name: HubNode
+  kind: type
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 37
+  module: hypha-hub
+- name: HubState
+  kind: type
+  file: crates/hypha-hub/src/lib.rs
+  line: 57
+  module: hypha-hub
+- name: KEYRING_SERVICE
+  kind: const
+  file: crates/hypha-hub/src/credentials.rs
+  line: 24
+  module: hypha-hub
+- name: KEYRING_TEST_LOCK
+  kind: const
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 20
+  module: hypha-hub
+- name: KeyringCredentials
+  kind: type
+  file: crates/hypha-hub/src/credentials.rs
+  line: 85
+  module: hypha-hub
+- name: MAX_PROXY_BODY
+  kind: const
+  file: crates/hypha-hub/src/proxy.rs
+  line: 27
+  module: hypha-hub
+- name: MAX_SUBSCRIBE_BODY
+  kind: const
+  file: crates/hypha-hub/src/push_routes.rs
+  line: 19
+  module: hypha-hub
+- name: MockMap
+  kind: type
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 204
+  module: hypha-hub
+- name: NodeCredentials
+  kind: trait
+  file: crates/hypha-hub/src/credentials.rs
+  line: 32
+  module: hypha-hub
+- name: Registry
+  kind: type
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 173
+  module: hypha-hub
+- name: STORE_ENV
+  kind: const
+  file: crates/hypha-hub/src/credentials.rs
+  line: 26
+  module: hypha-hub
+- name: ScriptReader
+  kind: type
+  file: crates/hypha-hub/src/proxy.rs
+  line: 335
+  module: hypha-hub
+- name: SharedBuilder
+  kind: type
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 238
+  module: hypha-hub
+- name: SharedCred
+  kind: type
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 206
+  module: hypha-hub
+- name: StreamRouter
+  kind: type
+  file: crates/hypha-hub/src/lib.rs
+  line: 54
+  module: hypha-hub
+- name: SyncEntityApi
+  kind: type
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 198
+  module: hypha-hub
+- name: TestNoticePolicy
+  kind: type
+  file: crates/hypha-hub/tests/routes.rs
+  line: 316
+  module: hypha-hub
+- name: TestPolicy
+  kind: type
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 1069
+  module: hypha-hub
+- name: TestPolicy
+  kind: type
+  file: crates/hypha-hub/tests/sync_api.rs
+  line: 61
+  module: hypha-hub
+- name: adopt_credential
+  kind: function
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 496
+  module: hypha-hub
+- name: adopt_credential_arms
+  kind: function
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 1050
+  module: hypha-hub
+- name: api_against
+  kind: function
+  file: crates/hypha-hub/tests/sync_api.rs
+  line: 252
+  module: hypha-hub
+- name: api_err
+  kind: function
+  file: crates/hypha-hub/src/entity_routes.rs
+  line: 24
+  module: hypha-hub
+- name: api_error_arms
+  kind: function
+  file: crates/hypha-hub/tests/sync_api.rs
+  line: 563
+  module: hypha-hub
+- name: api_for
+  kind: function
+  file: crates/hypha-hub/src/sync_api.rs
+  line: 1133
+  module: hypha-hub
+- name: api_for
+  kind: function
+  file: crates/hypha-hub/tests/transfer.rs
+  line: 101
+  module: hypha-hub
+- name: as_any
+  kind: function
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 177
+  module: hypha-hub
+- name: as_any
+  kind: function
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 192
+  module: hypha-hub
+- name: as_any
+  kind: function
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 233
+  module: hypha-hub
+- name: as_any
+  kind: function
+  file: crates/hypha-hub/tests/credentials.rs
+  line: 251
+  module: hypha-hub
+api_omitted: 241
+deps:
+- async-trait
+- axum
+- form_urlencoded
+- futures
+- hypha-control
+- hypha-http
+- hypha-node-api
+- hypha-outbox
+- hypha-push
+- hypha-sync
+- hypha-telemetry
+- keyring
+- serde
+- serde_json
+- tokio
+- tower-http
+- tracing
+- ureq
+- uuid
+- tempfile
+- tower
+- tracing-subscriber
+- serde_json
+- tower
+- hypha-sync
+- hypha-control
+- futures
+- axum
+- hypha-push
+- tracing
+notes: ''
+verify:
+- crates/hypha-hub/Cargo.toml
+- crates/hypha-hub/src/lib.rs
+- crates/hypha-hub/src/main.rs
+- crates/hypha-hub/src/auth.rs
+- crates/hypha-hub/src/credentials.rs
+- crates/hypha-hub/src/entity_routes.rs
+- crates/hypha-hub/src/kind_policies.rs
+- crates/hypha-hub/src/proxy.rs
+- crates/hypha-hub/src/push_routes.rs
+- crates/hypha-hub/src/sync_api.rs
+provenance:
+  files:
+  - crates/hypha-hub/Cargo.toml
+  - crates/hypha-hub/src/auth.rs
+  - crates/hypha-hub/src/credentials.rs
+  - crates/hypha-hub/src/entity_routes.rs
+  - crates/hypha-hub/src/kind_policies.rs
+  - crates/hypha-hub/src/lib.rs
+  - crates/hypha-hub/src/main.rs
+  - crates/hypha-hub/src/proxy.rs
+  - crates/hypha-hub/src/push_routes.rs
+  - crates/hypha-hub/src/sync_api.rs
+  - crates/hypha-hub/tests/credentials.rs
+  - crates/hypha-hub/tests/routes.rs
+  - crates/hypha-hub/tests/sync_api.rs
+  - crates/hypha-hub/tests/transfer.rs
+  hashes:
+  - 26e1fee5b2f2be51e13ce7d142af40a32901ab98
+  - d1d2aeec300a54bcd44c0d4231726e479db7de21
+  - f6d582ffc94611bf4b4ce7ff061c84107e725b8c
+  - 7b2d958d9c7afa61b5a8e7abc23444c6145052b9
+  - db73338362417dbe862ebe3b830ecb1fefc2f260
+  - 736c988e8d9e9a06b6221a600b985692ea77596a
+  - aa0d50c2593e40f172360952049d5142bb1920dc
+  - cedd51dd79c20e753cf469ae20849462de936a0d
+  - 5bfc682944ac8fb7f11ee81abea66261ad4b8647
+  - 085f02f0c53d0819e39502a6e7dcc18de0cac84b
+  - 964c30fbef20eb96b1aede573f4826e0c71860e5
+  - c63eeff307ec1ecd91c66d52f4f24c92d0932699
+  - 6d87c5686b113b50bfe99397e1db6995923ed0f5
+  - cfd3aec231f5356973c0391602fb5e041f502085
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

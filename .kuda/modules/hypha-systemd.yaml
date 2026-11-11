@@ -1,0 +1,173 @@
+name: hypha-systemd
+path: crates/hypha-systemd/Cargo.toml
+purpose: systemd impl of the service port
+api:
+- name: SystemdService
+  kind: type
+  file: crates/hypha-systemd/src/lib.rs
+  line: 172
+  module: hypha-systemd
+- name: control_verbs_run_or_error
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 314
+  module: hypha-systemd
+- name: daemon_reload
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 102
+  module: hypha-systemd
+- name: default_unit_dir
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 19
+  module: hypha-systemd
+- name: default_unit_dir_under_home
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 339
+  module: hypha-systemd
+- name: destroy
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 216
+  module: hypha-systemd
+- name: disable
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 121
+  module: hypha-systemd
+- name: disable
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 237
+  module: hypha-systemd
+- name: enable
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 110
+  module: hypha-systemd
+- name: enable
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 231
+  module: hypha-systemd
+- name: exec
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 250
+  module: hypha-systemd
+- name: hypha-systemd
+  kind: module
+  file: crates/hypha-systemd/Cargo.toml
+  line: 1
+  module: hypha-systemd
+- name: paths_and_render
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 255
+  module: hypha-systemd
+- name: quote_arg
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 36
+  module: hypha-systemd
+- name: remove
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 133
+  module: hypha-systemd
+- name: remove_error_arm
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 305
+  module: hypha-systemd
+- name: render
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 50
+  module: hypha-systemd
+- name: restart
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 165
+  module: hypha-systemd
+- name: restart
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 226
+  module: hypha-systemd
+- name: run
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 92
+  module: hypha-systemd
+- name: service_trait_impl
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 329
+  module: hypha-systemd
+- name: status
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 146
+  module: hypha-systemd
+- name: status
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 222
+  module: hypha-systemd
+- name: tests
+  kind: module
+  file: crates/hypha-systemd/src/lib.rs
+  line: 243
+  module: hypha-systemd
+- name: unit_path
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 30
+  module: hypha-systemd
+- name: user
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 188
+  module: hypha-systemd
+- name: write
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 202
+  module: hypha-systemd
+- name: write_and_remove_unit
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 276
+  module: hypha-systemd
+- name: write_error_arm
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 298
+  module: hypha-systemd
+- name: write_unit
+  kind: function
+  file: crates/hypha-systemd/src/lib.rs
+  line: 79
+  module: hypha-systemd
+deps:
+- hypha-service
+- tempfile
+- hypha-service
+- tempfile
+notes: ''
+verify:
+- crates/hypha-systemd/Cargo.toml
+- crates/hypha-systemd/src/lib.rs
+provenance:
+  files:
+  - crates/hypha-systemd/Cargo.toml
+  - crates/hypha-systemd/src/lib.rs
+  hashes:
+  - 56c345f27d76728ed4c4f11e2d35cbac01d0ce3a
+  - 81b490714484b4b265796129bfa21b9bcefc928f
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

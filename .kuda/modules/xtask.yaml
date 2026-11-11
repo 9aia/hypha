@@ -1,0 +1,45 @@
+name: xtask
+path: xtask/Cargo.toml
+purpose: hypha-xtask — workspace automation.
+api:
+- name: llvm_cov_available
+  kind: function
+  file: xtask/src/main.rs
+  line: 34
+  module: xtask
+- name: main
+  kind: function
+  file: xtask/src/main.rs
+  line: 43
+  module: xtask
+- name: nextest_available
+  kind: function
+  file: xtask/src/main.rs
+  line: 24
+  module: xtask
+- name: run
+  kind: function
+  file: xtask/src/main.rs
+  line: 13
+  module: xtask
+- name: xtask
+  kind: module
+  file: xtask/Cargo.toml
+  line: 1
+  module: xtask
+deps:
+- anyhow
+notes: ''
+verify:
+- xtask/Cargo.toml
+- xtask/src/main.rs
+provenance:
+  files:
+  - xtask/Cargo.toml
+  - xtask/src/main.rs
+  hashes:
+  - b884f908a56302753d1161daa824eafb87714acb
+  - 928df5dee498731c208330a1948670eca684d3d4
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

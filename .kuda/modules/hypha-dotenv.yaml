@@ -1,0 +1,100 @@
+name: hypha-dotenv
+path: crates/hypha-dotenv/Cargo.toml
+purpose: dotenv-file impl of the secret port
+api:
+- name: DotenvSecrets
+  kind: type
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 7
+  module: hypha-dotenv
+- name: cov_tests
+  kind: module
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 80
+  module: hypha-dotenv
+- name: get
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 49
+  module: hypha-dotenv
+- name: get_rejects_invalid_names
+  kind: function
+  file: crates/hypha-dotenv/tests/dotenv.rs
+  line: 23
+  module: hypha-dotenv
+- name: hypha-dotenv
+  kind: module
+  file: crates/hypha-dotenv/Cargo.toml
+  line: 1
+  module: hypha-dotenv
+- name: invalid_input
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 23
+  module: hypha-dotenv
+- name: read
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 43
+  module: hypha-dotenv
+- name: round_trip_and_replace
+  kind: function
+  file: crates/hypha-dotenv/tests/dotenv.rs
+  line: 34
+  module: hypha-dotenv
+- name: secrets_file_is_owner_only
+  kind: function
+  file: crates/hypha-dotenv/tests/dotenv.rs
+  line: 51
+  module: hypha-dotenv
+- name: set
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 59
+  module: hypha-dotenv
+- name: set_on_an_unwritable_parent_errors
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 86
+  module: hypha-dotenv
+- name: set_rejects_injecting_names_and_values
+  kind: function
+  file: crates/hypha-dotenv/tests/dotenv.rs
+  line: 8
+  module: hypha-dotenv
+- name: valid_name
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 13
+  module: hypha-dotenv
+- name: valid_value
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 19
+  module: hypha-dotenv
+- name: write_secret_file
+  kind: function
+  file: crates/hypha-dotenv/src/lib.rs
+  line: 30
+  module: hypha-dotenv
+deps:
+- hypha-secret
+- tempfile
+- hypha-secret
+notes: ''
+verify:
+- crates/hypha-dotenv/Cargo.toml
+- crates/hypha-dotenv/src/lib.rs
+- crates/hypha-dotenv/tests/dotenv.rs
+provenance:
+  files:
+  - crates/hypha-dotenv/Cargo.toml
+  - crates/hypha-dotenv/src/lib.rs
+  - crates/hypha-dotenv/tests/dotenv.rs
+  hashes:
+  - 61b8f7d9a1ae26565f5cb2fc6f6b7f7e75338e81
+  - dba5f24a322799339b1575316a4a41474cb8533f
+  - 9342757b1ce7eafe7e2c2e1bce23b1c9b3774140
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

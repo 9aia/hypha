@@ -1,0 +1,49 @@
+name: docs
+path: docs/package.json
+purpose: documentation corpus — pages as records, backticked refs as edges
+api: []
+deps: []
+notes: ''
+verify:
+- docs/package.json
+- docs/explanation/architecture.md
+- docs/explanation/boundary.md
+- docs/explanation/model.md
+- docs/getting-started.md
+- docs/how-to/read-the-ledger.md
+- docs/how-to/run-the-tests.md
+- docs/index.md
+- docs/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
+- docs/reference/crates.md
+provenance:
+  files:
+  - docs/explanation/architecture.md
+  - docs/explanation/boundary.md
+  - docs/explanation/model.md
+  - docs/getting-started.md
+  - docs/how-to/read-the-ledger.md
+  - docs/how-to/run-the-tests.md
+  - docs/index.md
+  - docs/package.json
+  - docs/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
+  - docs/reference/crates.md
+  - docs/reference/environment.md
+  - docs/reference/wire-api.md
+  - docs/tutorials/first-entity.md
+  hashes:
+  - f4f01e9433fa6c49ed3bec618da7a5dce56f63a4
+  - eda435aa4113ac7b0d35b4cfa61c3c968e20e86f
+  - 31c34f85d32f131251ec0b09b3407899163a5612
+  - 94b39e8ed66741f14eeecb153421359fe3b8f422
+  - cdddb2da0143b6b095fa88ed67a34db45fa3a18f
+  - ba0f053ed057793d15bf998a87318faed0b575f5
+  - 6b1abbce6eeebfac846b0377506d6e79da6f3028
+  - 12832317eec887a233d2309473a85a58697bb4ed
+  - 175fa4f47aecdc02e902d243a1c29914eb2ee258
+  - 11b43065347b418ff92a0416317fefa946d60621
+  - 969a0757dfc579b22258685f4294c4e7080a31fd
+  - 04f1313b2b9f405710c86e2f2569697e4ef7f68e
+  - 5db1b296e0837ae59fdd74bb3b801aedaea566e3
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

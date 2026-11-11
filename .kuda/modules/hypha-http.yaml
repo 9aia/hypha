@@ -1,0 +1,288 @@
+name: hypha-http
+path: crates/hypha-http/Cargo.toml
+purpose: Hypha HTTP substrate — axum adapter serving /api/entities*, /api/events, node/pairing/auth, and push over a HyphaState
+api:
+- name: AUTH_COOKIE
+  kind: const
+  file: crates/hypha-http/src/auth.rs
+  line: 20
+  module: hypha-http
+- name: AgentLister
+  kind: type
+  file: crates/hypha-http/src/lib.rs
+  line: 48
+  module: hypha-http
+- name: CROCKFORD
+  kind: const
+  file: crates/hypha-http/src/pair.rs
+  line: 20
+  module: hypha-http
+- name: DAY
+  kind: const
+  file: crates/hypha-http/src/ratelimit.rs
+  line: 181
+  module: hypha-http
+- name: DEFAULT_HOST
+  kind: const
+  file: crates/hypha-http/src/env.rs
+  line: 12
+  module: hypha-http
+- name: DEFAULT_MAX_KEYS
+  kind: const
+  file: crates/hypha-http/src/ratelimit.rs
+  line: 22
+  module: hypha-http
+- name: DEFAULT_ORIGINS
+  kind: const
+  file: crates/hypha-http/src/env.rs
+  line: 20
+  module: hypha-http
+- name: DEFAULT_PAIR_LIMIT_PER_DAY
+  kind: const
+  file: crates/hypha-http/src/env.rs
+  line: 18
+  module: hypha-http
+- name: DEFAULT_PAIR_LIMIT_PER_MIN
+  kind: const
+  file: crates/hypha-http/src/env.rs
+  line: 17
+  module: hypha-http
+- name: DEFAULT_PORT
+  kind: const
+  file: crates/hypha-http/src/env.rs
+  line: 11
+  module: hypha-http
+- name: DEFAULT_SSE_KEEPALIVE_MS
+  kind: const
+  file: crates/hypha-http/src/env.rs
+  line: 13
+  module: hypha-http
+- name: EntityContext
+  kind: type
+  file: crates/hypha-http/src/entity_plane.rs
+  line: 29
+  module: hypha-http
+- name: EntityPlane
+  kind: trait
+  file: crates/hypha-http/src/entity_plane.rs
+  line: 65
+  module: hypha-http
+- name: Entry
+  kind: type
+  file: crates/hypha-http/src/ratelimit.rs
+  line: 24
+  module: hypha-http
+- name: Env
+  kind: type
+  file: crates/hypha-http/src/env.rs
+  line: 29
+  module: hypha-http
+- name: EnvError
+  kind: type
+  file: crates/hypha-http/src/env.rs
+  line: 25
+  module: hypha-http
+- name: EventFeed
+  kind: type
+  file: crates/hypha-http/src/feed.rs
+  line: 33
+  module: hypha-http
+- name: FeedEvent
+  kind: type
+  file: crates/hypha-http/src/feed.rs
+  line: 25
+  module: hypha-http
+- name: HYPHA_VERSION
+  kind: const
+  file: crates/hypha-http/src/node.rs
+  line: 22
+  module: hypha-http
+- name: HealthProbe
+  kind: type
+  file: crates/hypha-http/src/lib.rs
+  line: 118
+  module: hypha-http
+- name: HyphaState
+  kind: type
+  file: crates/hypha-http/src/lib.rs
+  line: 56
+  module: hypha-http
+- name: KindRegistry
+  kind: type
+  file: crates/hypha-http/src/entity_plane.rs
+  line: 131
+  module: hypha-http
+- name: MAX_JSON_BODY
+  kind: const
+  file: crates/hypha-http/src/routes/mod.rs
+  line: 49
+  module: hypha-http
+- name: MAX_QUEUED
+  kind: const
+  file: crates/hypha-http/src/feed.rs
+  line: 19
+  module: hypha-http
+- name: MIN
+  kind: const
+  file: crates/hypha-http/src/ratelimit.rs
+  line: 180
+  module: hypha-http
+- name: NodeIdentity
+  kind: type
+  file: crates/hypha-http/src/node.rs
+  line: 15
+  module: hypha-http
+- name: PAIR_CODE_TTL_MS
+  kind: const
+  file: crates/hypha-http/src/pair.rs
+  line: 17
+  module: hypha-http
+- name: PROTOCOL_VERSION
+  kind: const
+  file: crates/hypha-http/src/node.rs
+  line: 11
+  module: hypha-http
+- name: Pairing
+  kind: type
+  file: crates/hypha-http/src/pair.rs
+  line: 139
+  module: hypha-http
+- name: PairingInner
+  kind: type
+  file: crates/hypha-http/src/pair.rs
+  line: 143
+  module: hypha-http
+- name: PairingStore
+  kind: type
+  file: crates/hypha-http/src/pair.rs
+  line: 83
+  module: hypha-http
+- name: Quota
+  kind: type
+  file: crates/hypha-http/src/ratelimit.rs
+  line: 14
+  module: hypha-http
+- name: RateLimiter
+  kind: type
+  file: crates/hypha-http/src/ratelimit.rs
+  line: 38
+  module: hypha-http
+- name: SMALL_JSON_BODY
+  kind: const
+  file: crates/hypha-http/src/routes/mod.rs
+  line: 45
+  module: hypha-http
+- name: Stub
+  kind: type
+  file: crates/hypha-http/src/entity_plane.rs
+  line: 194
+  module: hypha-http
+- name: Widget
+  kind: type
+  file: crates/hypha-http/tests/app.rs
+  line: 15
+  module: hypha-http
+- name: absorb_code_file
+  kind: function
+  file: crates/hypha-http/src/pair.rs
+  line: 241
+  module: hypha-http
+- name: accepts
+  kind: function
+  file: crates/hypha-http/src/pair.rs
+  line: 283
+  module: hypha-http
+- name: accepts_credential
+  kind: function
+  file: crates/hypha-http/src/auth.rs
+  line: 89
+  module: hypha-http
+- name: admits_up_to_max_then_limits
+  kind: function
+  file: crates/hypha-http/src/ratelimit.rs
+  line: 188
+  module: hypha-http
+api_omitted: 206
+deps:
+- async-trait
+- axum
+- base64
+- form_urlencoded
+- futures
+- http-body-util
+- hypha-push
+- hypha-telemetry
+- nix
+- serde
+- serde_json
+- sha2
+- thiserror
+- time
+- tokio
+- tracing
+- uuid
+- tempfile
+- tower
+- serde_json
+- tower
+- base64
+- sha2
+- axum
+- tracing
+- entity_plane
+- env
+- feed
+- node
+- pair
+- ratelimit
+- serde
+- futures
+- hypha-push
+notes: ''
+verify:
+- crates/hypha-http/Cargo.toml
+- crates/hypha-http/src/lib.rs
+- crates/hypha-http/src/routes/mod.rs
+- crates/hypha-http/src/auth.rs
+- crates/hypha-http/src/entity_plane.rs
+- crates/hypha-http/src/env.rs
+- crates/hypha-http/src/feed.rs
+- crates/hypha-http/src/node.rs
+- crates/hypha-http/src/pair.rs
+- crates/hypha-http/src/ratelimit.rs
+provenance:
+  files:
+  - crates/hypha-http/Cargo.toml
+  - crates/hypha-http/src/auth.rs
+  - crates/hypha-http/src/entity_plane.rs
+  - crates/hypha-http/src/env.rs
+  - crates/hypha-http/src/feed.rs
+  - crates/hypha-http/src/lib.rs
+  - crates/hypha-http/src/node.rs
+  - crates/hypha-http/src/pair.rs
+  - crates/hypha-http/src/ratelimit.rs
+  - crates/hypha-http/src/routes/entities.rs
+  - crates/hypha-http/src/routes/events.rs
+  - crates/hypha-http/src/routes/misc.rs
+  - crates/hypha-http/src/routes/mod.rs
+  - crates/hypha-http/src/routes/push.rs
+  - crates/hypha-http/tests/app.rs
+  hashes:
+  - 51f2ea80a8fb26b81777c1ca5fbed2b0bd1305cc
+  - 24e5b7d25295bc760726b3c3e91f184785989e26
+  - 4ce0f867ae7bd3c120333c505d6d1a478fad64d2
+  - f0cdf0bfe9f5a0f9f6fddcb6a79c7b186b9af603
+  - fef8c3f73a5ff6d25aa9b4af166f8df71fec07e5
+  - 5b66c8303ce3403f8e53b84f2875fc4f34c5e447
+  - 82b2f1281cb3c5eaa902b5c41506eb619b650b3b
+  - 9eae1005b41f3b1cac1a64afa79ed554f6f25bda
+  - 7fbdba0a992f2d57c7667f1c235da8badffd4df9
+  - f02996c764ad879a45d19e00c2ca165ef1cd22cc
+  - f0ce5de16939f2f0d5121d95eb498bc51957e788
+  - d6f364e6a15932c89d4c4ce82fae91b5da358ad8
+  - 560f162686a626001bda06b89639390088af8040
+  - 3abbd9568f618e8e184735af257814197eafe169
+  - 1befa5c6eebcf0192334a11ded1b8a09964b59ae
+  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
+  generated_at: '1794371182'
+  generator: kuda-template/0.1.2

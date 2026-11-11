@@ -1652,6 +1652,14 @@ name = "hypha-secret"
 version = "0.1.0"
 
 [[package]]
+name = "hypha-serve-cli"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "hypha-service"
 version = "0.1.0"
 

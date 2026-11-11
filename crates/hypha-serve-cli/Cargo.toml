@@ -1,0 +1,14 @@
+[package]
+name = "hypha-serve-cli"
+description = "One-shot argv→op-params shim for ndjson *-serve binaries — the generic CLI front door (P-020)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

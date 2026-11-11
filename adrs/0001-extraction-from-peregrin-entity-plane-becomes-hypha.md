@@ -3,7 +3,7 @@ id = "ADR-0001"
 title = "Extraction from peregrin — entity plane becomes hypha"
 status = "done"
 created = "2026-11-09"
-priority = "medium"
+priority = "med"
 +++
 
 ## Context

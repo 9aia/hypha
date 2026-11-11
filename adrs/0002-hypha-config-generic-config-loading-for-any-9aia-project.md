@@ -3,7 +3,7 @@ id = "ADR-0002"
 title = "hypha-config — generic config loading for any 9aia project"
 status = "done"
 created = "2026-11-10"
-priority = "medium"
+priority = "med"
 labels = ["config", "hypha"]
 links = ["P-015"]
 +++

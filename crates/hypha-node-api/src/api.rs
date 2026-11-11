@@ -244,7 +244,12 @@ impl EntityApi for HttpEntityApi {
 
     async fn entity(&self, id: &str) -> Result<EntityDto, String> {
         let api = self.clone();
-        let id = id.to_string();
+        // Entity ids are integration-owned and may contain `/`
+        // (bupha's `ci:{key}:{sha}:{attempt}` does) — percent-encode
+        // so they stay inside the `{id}` path segment; axum decodes
+        // the capture back (`hypha-sync`'s `encode_segment` does the
+        // same for its node client).
+        let id = url_encode(id);
         tokio::task::spawn_blocking(move || {
             read_json(api.get(&format!("/api/entities/{id}"))?, "get entity")
         })
@@ -273,7 +278,7 @@ impl EntityApi for HttpEntityApi {
 
     async fn submit_op(&self, id: &str, op: &EntityOp) -> Result<(), String> {
         let api = self.clone();
-        let id = id.to_string();
+        let id = url_encode(id);
         let body = serde_json::to_value(op).map_err(err_msg)?;
         tokio::task::spawn_blocking(move || {
             let res = api.send_json("POST", &format!("/api/entities/{id}/ops"), &body)?;
@@ -289,7 +294,7 @@ impl EntityApi for HttpEntityApi {
 
     async fn delete_entity(&self, id: &str) -> Result<(), String> {
         let api = self.clone();
-        let id = id.to_string();
+        let id = url_encode(id);
         tokio::task::spawn_blocking(move || {
             let res = api
                 .request("DELETE", &format!("/api/entities/{id}"))
@@ -307,7 +312,7 @@ impl EntityApi for HttpEntityApi {
 
     async fn snapshot_export(&self, id: &str) -> Result<Value, String> {
         let api = self.clone();
-        let id = id.to_string();
+        let id = url_encode(id);
         tokio::task::spawn_blocking(move || {
             read_json(
                 api.get(&format!("/api/entities/{id}/snapshot"))?,

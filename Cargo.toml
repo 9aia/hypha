@@ -6,6 +6,8 @@ members = [
     "crates/hypha-http",
     "crates/hypha-hub",
     "crates/hypha-keyring",
+    "crates/hypha-kv",
+    "crates/hypha-kv-file",
     "crates/hypha-node",
     "crates/hypha-node-api",
     "crates/hypha-outbox",
@@ -34,6 +36,8 @@ hypha-dotenv = { path = "crates/hypha-dotenv", version = "0.1.0" }
 hypha-http = { path = "crates/hypha-http", version = "0.1.0" }
 hypha-hub = { path = "crates/hypha-hub", version = "0.1.0" }
 hypha-keyring = { path = "crates/hypha-keyring", version = "0.1.0" }
+hypha-kv = { path = "crates/hypha-kv", version = "0.1.0" }
+hypha-kv-file = { path = "crates/hypha-kv-file", version = "0.1.0" }
 hypha-node = { path = "crates/hypha-node", version = "0.1.0" }
 hypha-node-api = { path = "crates/hypha-node-api", version = "0.1.0" }
 hypha-outbox = { path = "crates/hypha-outbox", version = "0.1.0" }
@@ -85,6 +89,7 @@ rusqlite = { version = "0.32" }
 ureq = { version = "3", features = ["json"] }
 base64 = "0.22"
 p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+ed25519-dalek = "2"
 rand = "0.8"
 web-push = { version = "0.11", features = ["isahc-client"] }
 time = { version = "0.3", features = ["formatting", "parsing"] }

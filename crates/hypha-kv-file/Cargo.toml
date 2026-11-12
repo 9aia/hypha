@@ -1,0 +1,18 @@
+[package]
+name = "hypha-kv-file"
+description = "JSON-file impl of the hypha-kv store port — atomic tmp+rename writes (P-006)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+[dependencies]
+hypha-kv.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

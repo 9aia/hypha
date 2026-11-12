@@ -1,0 +1,14 @@
+[package]
+name = "hypha-kv"
+description = "Node-local key/value store port — namespaced JSON values with per-namespace visibility (P-006)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true

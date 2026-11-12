@@ -8,6 +8,7 @@
 
 pub mod entities;
 pub mod events;
+pub mod kv;
 pub mod misc;
 pub mod push;
 

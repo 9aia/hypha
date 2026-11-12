@@ -18,7 +18,8 @@ Ports-and-adapters. Crates are named `hypha-<port>` (trait) and
 | `crates/hypha-outbox` | durable per-entity FIFO op queue (SQLite) for writes while a node is offline |
 | `crates/hypha-sync` | hub-side sync — SQLite entity-index projection + per-node sync engine over `hypha-outbox` (ex-`peregrin-sync`) |
 | `crates/hypha-push` | Web Push notifications over a JSON document store — VAPID keys, subscription prefs, 404/410 prune (ex-`peregrin-push`, sepia-free) |
-| `crates/hypha-http` | substrate HTTP surface (ex-`peregrin-http` split) — `app(HyphaState)` axum router: `/api/entities*` kind planes, `/api/events` feed, node/pairing/auth, `/api/push/*`; kind-agnostic, integrations nest their routes |
+| `crates/hypha-http` | substrate HTTP surface (ex-`peregrin-http` split) — `app(HyphaState)` axum router: `/api/entities*` kind planes, `/api/events` feed, node/pairing/auth, `/api/push/*`, `/api/kv*` node-local KV + `/api/client/keypair`; kind-agnostic, integrations nest their routes |
+| `crates/hypha-kv` + `-file` | node-local KV store port + JSON-file impl (P-006) — `{ns}/{key}` → `serde_json::Value`, per-namespace `public`/`internal` visibility (the `INTERNAL_CONFIG` denylist generalized), atomic tmp+rename flush; absorbs peregrin's config/projects surface |
 | `crates/hypha-node` | node host library — `Env` → `HyphaState` → `hypha_http::app`; integrations register planes via `HyphaState::with_kind`, then `serve_state`. Ships the `hypha` bin (`hypha serve`, zero kinds) |
 | `crates/hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi` over the sync engine, merged `/api/entities*` surface, SSE/passthrough proxies, push store, node credentials (keyring→file). Policy-injected: boots an empty `KindPolicies`, integrations supply theirs via `hub_state_with`/`hub_state_from_with`. Ships the `hypha-hub` bin |
 | `crates/hypha-control` | pure arbitration policy — lock registry, takeover, merge/route (`pick_owner`) |

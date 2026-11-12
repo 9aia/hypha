@@ -56,6 +56,9 @@ pub struct Env {
     /// `HYPHA_PUSH`/`HYPHA_PUSH_PATH` — the push config document
     /// (VAPID keys + subscriptions); `<home>/push.json` by default.
     pub push_path: PathBuf,
+    /// `HYPHA_KV`/`HYPHA_KV_PATH` — the node-local KV document
+    /// (`/api/kv*`); `<home>/kv.json` by default.
+    pub kv_path: PathBuf,
 }
 
 fn home_dir() -> PathBuf {
@@ -191,6 +194,9 @@ impl Env {
             push_path: get("HYPHA_PUSH")
                 .or_else(|| get("HYPHA_PUSH_PATH"))
                 .map_or_else(|| home.join("push.json"), PathBuf::from),
+            kv_path: get("HYPHA_KV")
+                .or_else(|| get("HYPHA_KV_PATH"))
+                .map_or_else(|| home.join("kv.json"), PathBuf::from),
         })
     }
 }

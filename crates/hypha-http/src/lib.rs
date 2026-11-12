@@ -111,11 +111,36 @@ pub struct HyphaState {
     /// handler returning the full response; `None` → the static
     /// `{"ok":true}` liveness answer.
     pub health_probe: Option<HealthProbe>,
+    /// Node-local key/value store behind `/api/kv*` (P-006) —
+    /// `None` → those routes answer 501. [`Self::from_env`] opens the
+    /// JSON-file impl at `HYPHA_KV` (`<home>/kv.json`); integrations
+    /// wanting a different backend or the meta.json migration install
+    /// their own via [`Self::with_kv`].
+    pub kv: Option<Arc<dyn hypha_kv::KvStore>>,
+    /// Post-write hook for `/api/kv*` mutations — see [`KvHook`].
+    pub kv_hook: Option<KvHook>,
 }
 
 /// A `GET /api/health` override — returns the complete response
 /// (status + body) the integration wants probes to see.
 pub type HealthProbe = Arc<dyn Fn() -> futures::future::BoxFuture<'static, Response> + Send + Sync>;
+
+/// One committed KV write, handed to [`KvHook`] — `op` is
+/// [`hypha_kv::KvOp::Set`] or [`hypha_kv::KvOp::Delete`].
+#[derive(Clone, Debug)]
+pub struct KvWrite {
+    pub ns: String,
+    pub key: String,
+    pub op: hypha_kv::KvOp,
+}
+
+/// Integration hook fired after every `/api/kv*` mutation — receives
+/// the write plus the shared [`EventFeed`] so it can emit its own
+/// kinds (peregrin maps project-namespace writes onto `"project"`
+/// events; config writes historically emitted nothing — return
+/// without emitting to suppress). `None` on
+/// [`HyphaState::kv_hook`] → the default `"kv"` feed event.
+pub type KvHook = Arc<dyn Fn(&KvWrite, &EventFeed) + Send + Sync>;
 
 impl HyphaState {
     /// Minimal state — tokenless, no pairing, no push, ephemeral node
@@ -148,6 +173,8 @@ impl HyphaState {
             keep_alive: Duration::from_millis(env::DEFAULT_SSE_KEEPALIVE_MS),
             push: None,
             health_probe: None,
+            kv: None,
+            kv_hook: None,
         }
     }
 
@@ -180,6 +207,8 @@ impl HyphaState {
                 hypha_push::JsonDocStore::open(&env.push_path),
             ))),
             health_probe: None,
+            kv: Some(Arc::new(hypha_kv_file::JsonKvStore::open(&env.kv_path))),
+            kv_hook: None,
         }
     }
 
@@ -312,6 +341,23 @@ impl HyphaState {
         self.health_probe = Some(probe);
         self
     }
+
+    /// Install the KV store behind `/api/kv*` — `None` leaves the
+    /// routes answering 501 (the default for [`Self::new`]).
+    #[must_use]
+    pub fn with_kv(mut self, kv: Option<Arc<dyn hypha_kv::KvStore>>) -> Self {
+        self.kv = kv;
+        self
+    }
+
+    /// Install the post-write hook for `/api/kv*` mutations — see
+    /// [`KvHook`]. `None` (the default) emits a `"kv"` feed event per
+    /// write.
+    #[must_use]
+    pub fn with_kv_hook(mut self, hook: Option<KvHook>) -> Self {
+        self.kv_hook = hook;
+        self
+    }
 }
 
 impl Default for HyphaState {
@@ -437,6 +483,10 @@ pub fn app_routes(state: &HyphaState) -> Router<HyphaState> {
         .route("/api/pending-ops", any(routes::entities::pending_ops))
         .route("/api/push/vapid", any(routes::push::vapid))
         .route("/api/push/subscribe", any(routes::push::subscribe))
+        .route("/api/kv", any(routes::kv::namespaces))
+        .route("/api/kv/{ns}", any(routes::kv::namespace))
+        .route("/api/kv/{ns}/{key}", any(routes::kv::entry))
+        .route("/api/client/keypair", any(routes::kv::keypair))
         // Every body read goes through `read_json_body` with an
         // explicit per-route cap (SMALL/MAX_JSON_BODY); axum's
         // 2MiB `DefaultBodyLimit` stays on as the backstop for any

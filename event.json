@@ -1,1 +1,1 @@
-{"id":"","ws":"release-sweep","actor":"luis","ts":1794502573,"op":{"op":"release","glob":"CONTRIBUTING.md"}}
+{"id":"","ws":"release-sweep","actor":"luis","ts":1794502573,"op":{"op":"release","glob":"provider/**"}}

@@ -40,16 +40,15 @@ Follow Diátaxis: `docs/tutorials/` (learn) · `docs/how-to/` (tasks) ·
 
 ## Releasing
 
-- crates.io publish is dep-ordered via `scripts/release.sh` (manual —
-  releases are operator-run). First publish is
-  manual: tag once, then the script bumps + publishes + tags.
-- crates.io names: `hypha`/`hypha-hub` are taken — packages publish
-  under crate names (`hypha-node` ships the `hypha` bin,
-  `cargo install hypha-node`).
-- Release binaries: run `scripts/release.sh` manually (there is no
-  release CI — releases are operator-driven). It builds
-  `hypha-<target>.tar.gz` (linux x86_64, macOS aarch64/x86_64)
-  carrying the `hypha` + `hypha-hub` bins.
-- Org publish order for the substrate stack: **hypha → sepia →
-  peregrin** (sepia-peregrin and peregrin's git deps carry `version`
-  reqs that resolve against the registry once published).
+`scripts/release.sh` is run manually by an operator on `main`
+(releases are operator-run) — one workspace version bump
+(`cargo set-version --workspace`), a version sync in the tamias
+provider pack (`provider/hypha-substrate/tamias.yaml`), and a
+`hypha-v<ver>` tag. There is **no crates.io publish**: org policy
+keeps every repo but tamias off crates.io (the `hypha`/`hypha-hub`
+names there are taken anyway), and the crates are internal
+lib-only engines. Distribution rides the tamias pack — after the
+tag, the operator runs `tamias publish provider/hypha-substrate`
+to ship the `hypha`/`hypha-hub` daemons to the org registry.
+Prebuilt binary artifacts are not part of the flow (dev installs
+use `cargo install --path`).

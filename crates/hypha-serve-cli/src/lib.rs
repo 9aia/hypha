@@ -131,11 +131,7 @@ where
         Ok(v) => {
             println!("{}", serde_json::to_string(&v).unwrap_or_default());
             // Serve convention: {"ok": bool, …} — ok:false exits 1.
-            if v.get("ok").and_then(Value::as_bool) == Some(false) {
-                1
-            } else {
-                0
-            }
+            i32::from(v.get("ok").and_then(Value::as_bool) == Some(false))
         }
         Err(e) => {
             eprintln!("{e}");
@@ -162,7 +158,7 @@ mod tests {
             "--yes",
         ]
         .iter()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect();
         let s = parse(&args).unwrap();
         assert_eq!(s.op, "release");

@@ -1,1 +1,1 @@
-{"id":"","ws":"release-sweep","actor":"luis","ts":1794502391,"op":{"op":"claim","glob":"provider/**","ttl_secs":3600}}
+{"id":"","ws":"release-sweep","actor":"luis","ts":1794502573,"op":{"op":"release","glob":"scripts/**"}}

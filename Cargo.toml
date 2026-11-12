@@ -13,6 +13,7 @@ members = [
     "crates/hypha-outbox",
     "crates/hypha-push",
     "crates/hypha-secret",
+    "crates/hypha-secret-cuora",
     "crates/hypha-serve-cli",
     "crates/hypha-service",
     "crates/hypha-sync",
@@ -43,6 +44,7 @@ hypha-node-api = { path = "crates/hypha-node-api", version = "0.1.0" }
 hypha-outbox = { path = "crates/hypha-outbox", version = "0.1.0" }
 hypha-push = { path = "crates/hypha-push", version = "0.1.0" }
 hypha-secret = { path = "crates/hypha-secret", version = "0.1.0" }
+hypha-secret-cuora = { path = "crates/hypha-secret-cuora", version = "0.1.0" }
 hypha-serve-cli = { path = "crates/hypha-serve-cli", version = "0.1.0" }
 hypha-service = { path = "crates/hypha-service", version = "0.1.0" }
 hypha-sync = { path = "crates/hypha-sync", version = "0.1.0" }

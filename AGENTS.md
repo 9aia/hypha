@@ -24,7 +24,7 @@ Ports-and-adapters. Crates are named `hypha-<port>` (trait) and
 | `crates/hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi` over the sync engine, merged `/api/entities*` surface, SSE/passthrough proxies, push store, node credentials (keyring→file). Policy-injected: boots an empty `KindPolicies`, integrations supply theirs via `hub_state_with`/`hub_state_from_with`. Ships the `hypha-hub` bin |
 | `crates/hypha-control` | pure arbitration policy — lock registry, takeover, merge/route (`pick_owner`) |
 | `crates/hypha-telemetry` | opt-in OTEL layer over `tracing` (OTLP export, W3C propagation) |
-| `crates/hypha-secret` + `-keyring`/`-dotenv` | secrets port + OS-keyring and dotenv impls |
+| `crates/hypha-secret` + `-keyring`/`-dotenv`/`-cuora` | secrets port + OS-keyring, dotenv, and cuora (`cuora://<scope>/<NAME>`, CLI + `cuora serve` transports) impls |
 | `crates/hypha-service` + `-systemd` | service-install port + systemd impl |
 | `xtask` | check / test / coverage / fmt |
 

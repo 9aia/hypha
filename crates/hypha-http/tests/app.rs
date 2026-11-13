@@ -198,6 +198,76 @@ async fn entity_get_create_op_delete_flow() {
 }
 
 #[tokio::test]
+async fn entity_create_op_dispatches_to_kind_plane() {
+    let router = app(state());
+
+    // `entity.create` — the durable-outbox replay verb. The path id
+    // is the FIFO bucket, not the entity id; `payload.kind` picks the
+    // plane and `payload.indexDoc` is the init (whole payload when
+    // indexDoc is absent, `kind` included — same as POST create).
+    let res = router
+        .clone()
+        .oneshot(
+            Request::post("/api/entities/create:test-widget/ops")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    r#"{"kind":"entity.create","payload":{"kind":"test-widget","indexDoc":{"x":7}}}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(body_json(res).await, json!({ "created": { "x": 7 } }));
+
+    // No indexDoc → the whole payload is the init (kind rides along,
+    // exactly like the collection route's body fallback).
+    let res = router
+        .clone()
+        .oneshot(
+            Request::post("/api/entities/create:test-widget/ops")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    r#"{"kind":"entity.create","payload":{"kind":"test-widget","x":8}}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        body_json(res).await,
+        json!({ "created": { "kind": "test-widget", "x": 8 } })
+    );
+
+    // Unregistered kind → 501, same as create.
+    let res = router
+        .clone()
+        .oneshot(
+            Request::post("/api/entities/create:ghost/ops")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    r#"{"kind":"entity.create","payload":{"kind":"ghost"}}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NOT_IMPLEMENTED);
+
+    // Other `entity.*` verbs stay reserved.
+    let res = router
+        .oneshot(
+            Request::post("/api/entities/w1/ops")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"kind":"entity.frob"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NOT_IMPLEMENTED);
+}
+
+#[tokio::test]
 async fn entity_index_and_pending_ops_reads() {
     let router = app(state());
 

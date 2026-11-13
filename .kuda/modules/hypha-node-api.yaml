@@ -5,7 +5,7 @@ api:
 - name: CreateResultDto
   kind: type
   file: crates/hypha-node-api/src/dto.rs
-  line: 62
+  line: 67
   module: hypha-node-api
 - name: DirsBody
   kind: type
@@ -55,12 +55,12 @@ api:
 - name: NodeInfoDto
   kind: type
   file: crates/hypha-node-api/src/dto.rs
-  line: 94
+  line: 101
   module: hypha-node-api
 - name: NodeStatusDto
   kind: type
   file: crates/hypha-node-api/src/dto.rs
-  line: 110
+  line: 117
   module: hypha-node-api
 - name: OpResult
   kind: type
@@ -80,22 +80,22 @@ api:
 - name: PendingOpDto
   kind: type
   file: crates/hypha-node-api/src/dto.rs
-  line: 73
+  line: 80
   module: hypha-node-api
 - name: PushKeysDto
   kind: type
   file: crates/hypha-node-api/src/dto.rs
-  line: 141
+  line: 148
   module: hypha-node-api
 - name: PushPrefsDto
   kind: type
   file: crates/hypha-node-api/src/dto.rs
-  line: 150
+  line: 157
   module: hypha-node-api
 - name: PushSubscriptionDto
   kind: type
   file: crates/hypha-node-api/src/dto.rs
-  line: 160
+  line: 167
   module: hypha-node-api
 - name: VapidBody
   kind: type
@@ -145,7 +145,7 @@ api:
 - name: delete_entity
   kind: function
   file: crates/hypha-node-api/src/testing.rs
-  line: 167
+  line: 168
   module: hypha-node-api
 - name: dto
   kind: module
@@ -175,12 +175,12 @@ api:
 - name: entity_index
   kind: function
   file: crates/hypha-node-api/src/testing.rs
-  line: 185
+  line: 186
   module: hypha-node-api
 - name: entity_index_doc_is_opaque
   kind: function
   file: crates/hypha-node-api/src/dto.rs
-  line: 197
+  line: 204
   module: hypha-node-api
 - name: err_msg
   kind: function
@@ -228,9 +228,9 @@ provenance:
   hashes:
   - cad127b79c162fee3c9db981f18347a00ccb47c8
   - e0f5acc51fb51c2ad1b364b969a6b404335826f9
-  - 88c342b254d40213fce02daa48468ae21af3782b
+  - 4f1f802d9714c8ca3c145cff7b782befc2d7a647
   - 535009983a30756cf30f354d37c4a038b7bf8758
-  - 234d8014dd66158661b206c7851e55b61b15841e
-  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
-  generated_at: '1794371182'
-  generator: kuda-template/0.1.2
+  - a6d77be43c3c49fd39564aafb5bdcc3cdb315de8
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

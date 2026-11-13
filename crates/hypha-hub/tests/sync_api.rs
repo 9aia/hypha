@@ -203,8 +203,13 @@ async fn canned(
 /// A node that stays up: `/api/events` is an open (never-ending) SSE
 /// stream and `GET /api/entities` lists `s1`, so the sync loop's
 /// connect cycle completes and marks the node `Up`. Everything else
-/// falls through to the canned responder.
-async fn serve_live_node() -> String {
+/// falls through to the canned responder. Returns the recorder so
+/// callers can assert on the wire calls.
+async fn serve_live_node() -> (Canned, String) {
+    serve_live_canned(Canned::default()).await
+}
+
+async fn serve_live_canned(m: Canned) -> (Canned, String) {
     async fn events() -> axum::response::Response {
         use axum::response::IntoResponse;
         (
@@ -224,17 +229,20 @@ async fn serve_live_node() -> String {
             }],
         }))
     }
+    // GET lists the fixture entity (keeps the sync loop's connect
+    // cycle alive → node Up); POST falls through to the canned
+    // responder so create assertions still record the wire call.
     let app = axum::Router::new()
         .route("/api/events", axum::routing::get(events))
-        .route("/api/entities", axum::routing::get(entities))
+        .route("/api/entities", axum::routing::get(entities).post(canned))
         .route("/api/{*rest}", axum::routing::any(canned))
-        .with_state(Canned::default());
+        .with_state(m.clone());
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
         let _ = axum::serve(listener, app).await;
     });
-    format!("http://{addr}")
+    (m, format!("http://{addr}"))
 }
 
 async fn serve_canned(m: Canned) -> (Canned, String) {
@@ -407,7 +415,7 @@ async fn submit_op_goes_direct_when_up_queue_when_down() {
 
 #[tokio::test]
 async fn submit_op_result_returns_the_node_body_when_up() {
-    let url = serve_live_node().await;
+    let (_mock, url) = serve_live_node().await;
     let (api, projection) = api_against(vec![hub_node("n1", &url)]);
     seed_entity(&projection, "n1", "s1", "Alpha");
     // Wait for the sync loop's connect cycle to mark the node up.
@@ -492,15 +500,34 @@ async fn delete_entity_submits_the_delete_op() {
     assert_eq!(pending[0].kind, "entity.delete");
 }
 
+/// Poll the projection until the sync loop marks `n1` up — the
+/// create fast path only posts direct once reachability is proven.
+async fn wait_node_up(projection: &hypha_sync::ProjectionStore) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let up = projection
+            .node("n1")
+            .unwrap()
+            .is_some_and(|row| row.status == hypha_sync::NodeStatus::Up);
+        if up {
+            break;
+        }
+        assert!(std::time::Instant::now() < deadline, "node never came up");
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+}
+
 #[tokio::test]
 async fn create_entity_posts_to_the_scoped_node() {
-    let (mock, url) = serve_canned(Canned::default()).await;
-    let (api, _projection) = api_against(vec![hub_node("n1", &url)]);
+    let (mock, url) = serve_live_node().await;
+    let (api, projection) = api_against(vec![hub_node("n1", &url)]);
+    wait_node_up(&projection).await;
     let res = api
         .create_entity("sepia-session", &json!({"cwd":"/work"}), Some("n1"))
         .await
         .unwrap();
     assert_eq!(res.id, "new-1");
+    assert!(!res.queued);
     assert!(
         mock.bodies()
             .iter()
@@ -515,6 +542,46 @@ async fn create_entity_posts_to_the_scoped_node() {
             .unwrap_err()
             .contains("not registered")
     );
+}
+
+#[tokio::test]
+async fn create_entity_queues_durably_when_the_node_is_down() {
+    // A canned node that never completes a sync cycle stays
+    // unregistered-down — the create must land in the outbox instead
+    // of erroring (the T-054 durable-enqueue path: webhook pushes
+    // survive node downtime and replay as `entity.create` ops).
+    let (mock, url) = serve_canned(Canned::default()).await;
+    let (api, _projection) = api_against(vec![hub_node("n1", &url)]);
+    let res = api
+        .create_entity("sepia-session", &json!({"cwd":"/work"}), Some("n1"))
+        .await
+        .unwrap();
+    assert!(res.queued);
+    assert_eq!(res.id, "");
+    // Nothing posted to the node — the write is parked, not dropped.
+    assert!(
+        mock.calls().iter().all(|c| !c.starts_with("POST ")),
+        "calls: {:?}",
+        mock.calls()
+    );
+    let pending = api.pending_ops().await.unwrap();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].kind, "entity.create");
+    assert_eq!(pending[0].entity_id, "create:sepia-session");
+    assert_eq!(pending[0].status, "queued");
+    // A retried identical create dedups on the content-keyed
+    // idempotency key — no double enqueue.
+    let again = api
+        .create_entity("sepia-session", &json!({"cwd":"/work"}), Some("n1"))
+        .await
+        .unwrap();
+    assert!(again.queued);
+    assert_eq!(api.pending_ops().await.unwrap().len(), 1);
+    // A different init is a different write.
+    api.create_entity("sepia-session", &json!({"cwd":"/other"}), Some("n1"))
+        .await
+        .unwrap();
+    assert_eq!(api.pending_ops().await.unwrap().len(), 2);
 }
 
 /* ---- node-level verbs -------------------------------------------------*/
@@ -561,10 +628,17 @@ async fn pair_persists_the_minted_token() {
 
 #[tokio::test]
 async fn api_error_arms() {
-    let mock = Canned::default();
-    mock.blank.lock().unwrap().push("/api/entities".into());
-    let (_m, url) = serve_canned(mock).await;
-    let (api, _projection) = api_against(vec![hub_node("n1", &url)]);
+    // The create arm needs the node marked up — a down node queues
+    // the create instead of erroring (the durable path).
+    let canned_mock = Canned::default();
+    canned_mock
+        .blank
+        .lock()
+        .unwrap()
+        .push("/api/entities".into());
+    let (_mock, url) = serve_live_canned(canned_mock).await;
+    let (api, projection) = api_against(vec![hub_node("n1", &url)]);
+    wait_node_up(&projection).await;
     // `create` returns `{}` → no `id` → the malformed arm.
     assert!(
         api.create_entity("sepia-session", &json!({}), Some("n1"))

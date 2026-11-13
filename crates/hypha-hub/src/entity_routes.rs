@@ -89,6 +89,9 @@ pub async fn collection(
                 .map(str::to_string)
                 .or(node_q);
             match state.node.create_entity(kind, &init, node.as_deref()).await {
+                // `queued` = the create parked in the durable outbox
+                // (owning node down) — accepted, replays on reconnect.
+                Ok(res) if res.queued => json_response(json!(res), StatusCode::ACCEPTED),
                 Ok(res) => json_response(json!(res), StatusCode::CREATED),
                 Err(e) => api_err(&e),
             }

@@ -100,7 +100,7 @@ api:
 - name: HealthProbe
   kind: type
   file: crates/hypha-http/src/lib.rs
-  line: 118
+  line: 126
   module: hypha-http
 - name: HyphaState
   kind: type
@@ -112,10 +112,20 @@ api:
   file: crates/hypha-http/src/entity_plane.rs
   line: 131
   module: hypha-http
+- name: KvHook
+  kind: type
+  file: crates/hypha-http/src/lib.rs
+  line: 143
+  module: hypha-http
+- name: KvWrite
+  kind: type
+  file: crates/hypha-http/src/lib.rs
+  line: 131
+  module: hypha-http
 - name: MAX_JSON_BODY
   kind: const
   file: crates/hypha-http/src/routes/mod.rs
-  line: 49
+  line: 50
   module: hypha-http
 - name: MAX_QUEUED
   kind: const
@@ -170,7 +180,7 @@ api:
 - name: SMALL_JSON_BODY
   kind: const
   file: crates/hypha-http/src/routes/mod.rs
-  line: 45
+  line: 46
   module: hypha-http
 - name: Stub
   kind: type
@@ -192,24 +202,17 @@ api:
   file: crates/hypha-http/src/pair.rs
   line: 283
   module: hypha-http
-- name: accepts_credential
-  kind: function
-  file: crates/hypha-http/src/auth.rs
-  line: 89
-  module: hypha-http
-- name: admits_up_to_max_then_limits
-  kind: function
-  file: crates/hypha-http/src/ratelimit.rs
-  line: 188
-  module: hypha-http
-api_omitted: 206
+api_omitted: 233
 deps:
 - async-trait
 - axum
 - base64
+- ed25519-dalek
 - form_urlencoded
 - futures
 - http-body-util
+- hypha-kv
+- hypha-kv-file
 - hypha-push
 - hypha-telemetry
 - nix
@@ -225,6 +228,8 @@ deps:
 - tower
 - serde_json
 - tower
+- hypha-kv
+- hypha-kv-file
 - base64
 - sha2
 - axum
@@ -263,26 +268,30 @@ provenance:
   - crates/hypha-http/src/ratelimit.rs
   - crates/hypha-http/src/routes/entities.rs
   - crates/hypha-http/src/routes/events.rs
+  - crates/hypha-http/src/routes/kv.rs
   - crates/hypha-http/src/routes/misc.rs
   - crates/hypha-http/src/routes/mod.rs
   - crates/hypha-http/src/routes/push.rs
   - crates/hypha-http/tests/app.rs
+  - crates/hypha-http/tests/kv.rs
   hashes:
-  - 51f2ea80a8fb26b81777c1ca5fbed2b0bd1305cc
+  - 0d2001c96062879144b5e0d76e3c8d491d003105
   - 24e5b7d25295bc760726b3c3e91f184785989e26
   - 4ce0f867ae7bd3c120333c505d6d1a478fad64d2
-  - f0cdf0bfe9f5a0f9f6fddcb6a79c7b186b9af603
+  - be67d7e9922586e4f18d195678d6d185df02ef46
   - fef8c3f73a5ff6d25aa9b4af166f8df71fec07e5
-  - 5b66c8303ce3403f8e53b84f2875fc4f34c5e447
+  - 739f97fcc69dc00c2c11295e32774338c6bdd1ee
   - 82b2f1281cb3c5eaa902b5c41506eb619b650b3b
   - 9eae1005b41f3b1cac1a64afa79ed554f6f25bda
   - 7fbdba0a992f2d57c7667f1c235da8badffd4df9
-  - f02996c764ad879a45d19e00c2ca165ef1cd22cc
+  - 0781d6f467e30269ee2ecf378ed14e196c057fb7
   - f0ce5de16939f2f0d5121d95eb498bc51957e788
+  - d548f60d29a3e6da6d4032fa2ea7157cfbd9e8da
   - d6f364e6a15932c89d4c4ce82fae91b5da358ad8
-  - 560f162686a626001bda06b89639390088af8040
+  - d80becd93d0697c85443c4f5ffb1444eb7ca1e3f
   - 3abbd9568f618e8e184735af257814197eafe169
-  - 1befa5c6eebcf0192334a11ded1b8a09964b59ae
-  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
-  generated_at: '1794371182'
-  generator: kuda-template/0.1.2
+  - 48b8efac938f655fc49dea3c5d0a9263ba3681b1
+  - 1a7319f99088c247cdcc4f804e9a70c8aa08f20f
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

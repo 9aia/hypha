@@ -57,12 +57,19 @@ pub struct EntityIndexDto {
 }
 
 /// `POST /api/entities` → `{id}` + echo of the registered entity.
+/// On a hub whose owning node is unreachable the create is accepted
+/// into the durable outbox instead: `queued` is `true`, `id` is empty
+/// (the entity id is node-derived at replay — callers must not treat
+/// it as an entity reference), and the write replays as an
+/// `entity.create` op on reconnect.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateResultDto {
     pub id: String,
     #[serde(default)]
     pub entity: Option<EntityDto>,
+    #[serde(default)]
+    pub queued: bool,
 }
 
 /// Queued (`"queued"`) and dead-lettered (`"failed"`) ops in a hub's

@@ -1,0 +1,72 @@
+name: hypha-serve-cli
+path: crates/hypha-serve-cli/Cargo.toml
+purpose: One-shot argv→op-params shim for ndjson *-serve binaries — the generic CLI front door (P-020).
+api:
+- name: OneShot
+  kind: type
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 25
+  module: hypha-serve-cli
+- name: ParseError
+  kind: type
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 31
+  module: hypha-serve-cli
+- name: hypha-serve-cli
+  kind: module
+  file: crates/hypha-serve-cli/Cargo.toml
+  line: 1
+  module: hypha-serve-cli
+- name: one_shot
+  kind: function
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 112
+  module: hypha-serve-cli
+- name: parse
+  kind: function
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 52
+  module: hypha-serve-cli
+- name: parse_errors
+  kind: function
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 171
+  module: hypha-serve-cli
+- name: parse_flags
+  kind: function
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 149
+  module: hypha-serve-cli
+- name: parse_value
+  kind: function
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 104
+  module: hypha-serve-cli
+- name: set_values_json_or_string
+  kind: function
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 180
+  module: hypha-serve-cli
+- name: tests
+  kind: module
+  file: crates/hypha-serve-cli/src/lib.rs
+  line: 145
+  module: hypha-serve-cli
+deps:
+- serde_json
+- thiserror
+- serde_json
+notes: ''
+verify:
+- crates/hypha-serve-cli/Cargo.toml
+- crates/hypha-serve-cli/src/lib.rs
+provenance:
+  files:
+  - crates/hypha-serve-cli/Cargo.toml
+  - crates/hypha-serve-cli/src/lib.rs
+  hashes:
+  - 922fa43fcaad6f3f42f384ea5e55ecd61643a2ae
+  - 7e6f23c11a9a25f962278472bf351f4d1dcf3620
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

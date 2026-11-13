@@ -156,6 +156,7 @@ impl EntityApi for FakeEntityApi {
                 index_doc: init.clone(),
                 ..EntityDto::default()
             }),
+            queued: false,
         })
     }
     async fn submit_op(&self, id: &str, op: &EntityOp) -> Result<(), String> {

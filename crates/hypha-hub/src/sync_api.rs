@@ -31,6 +31,7 @@ use hypha_node_api::dto::{
     PushSubscriptionDto,
 };
 use serde_json::Value;
+use sha2::Digest;
 
 /// Node registry entry — url + optional bearer token.
 #[derive(Clone, Default)]
@@ -634,38 +635,122 @@ impl EntityApi for SyncEntityApi {
         // served — aliases (`"session"`) resolve to the canonical
         // kind, and the policy's `validate_create` hook vets the init
         // doc before anything posts.
-        let Some((policy, _canonical)) = self.policies.for_create(kind) else {
+        let Some((policy, canonical)) = self.policies.for_create(kind) else {
             return Err(format!("entity kind {kind:?} not registered"));
         };
         policy.validate_create(init)?;
         let (node_id, client) = self.scoped_client(node)?;
-        let body = serde_json::json!({"kind": kind, "indexDoc": init});
-        let res =
-            tokio::task::spawn_blocking(move || client.send_json("POST", "/api/entities", &body))
-                .await
-                .map_err(join_err)?
-                .map_err(Self::err_message)?;
-        let id = res
-            .get("id")
-            .and_then(Value::as_str)
-            .ok_or_else(|| "create returned no entity id".to_string())?;
-        // The node's create response IS its entity doc (`{id, kind,
-        // indexDoc, …}`) — project it immediately so ops submitted
+
+        // Fast path — the node is up: `POST /api/entities` direct, the
+        // node's create response IS its entity doc (`{id, kind,
+        // indexDoc, …}`), projected immediately so ops submitted
         // right after the create route without waiting for the next
         // listing/resync. The next `apply_listing` reconciles it with
         // the node's authoritative doc either way.
-        if res.is_object() {
-            let projection = self.projection();
-            let node_id = node_id.clone();
-            let doc = res.clone();
-            tokio::task::spawn_blocking(move || projection.upsert_entity(&node_id, &doc))
-                .await
-                .map_err(join_err)?
-                .map_err(proj_err)?;
+        let up = self
+            .projection()
+            .node(&node_id)
+            .map_err(proj_err)?
+            .is_some_and(|row| row.status == hypha_sync::NodeStatus::Up);
+        if up {
+            let body = serde_json::json!({"kind": kind, "indexDoc": init});
+            let res = tokio::task::spawn_blocking({
+                let client = Arc::clone(&client);
+                move || client.send_json("POST", "/api/entities", &body)
+            })
+            .await;
+            match res {
+                Ok(Ok(res)) => {
+                    let id = res
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| "create returned no entity id".to_string())?;
+                    if res.is_object() {
+                        let projection = self.projection();
+                        let node_id = node_id.clone();
+                        let doc = res.clone();
+                        tokio::task::spawn_blocking(move || {
+                            projection.upsert_entity(&node_id, &doc)
+                        })
+                        .await
+                        .map_err(join_err)?
+                        .map_err(proj_err)?;
+                    }
+                    return Ok(CreateResultDto {
+                        id: id.to_string(),
+                        entity: None,
+                        queued: false,
+                    });
+                }
+                // Transport failure = fresh evidence the node is
+                // gone — reflect it and fall through to the durable
+                // queue (same ruling as `submit_op`).
+                Ok(Err(e)) if e.is_transport() => {
+                    let _ = self
+                        .projection()
+                        .set_node_status(&node_id, hypha_sync::NodeStatus::Down);
+                }
+                // Delivered and refused — not lost, surface the node's
+                // error verbatim.
+                Ok(Err(e)) => return Err(Self::err_message(e)),
+                Err(e) => return Err(join_err(e)),
+            }
         }
-        Ok(CreateResultDto {
-            id: id.to_string(),
-            entity: None,
+
+        // Durable path — the create becomes an `entity.create` outbox
+        // op: the sync engine posts it direct when the node is
+        // reachable (the node's ops route dispatches it to the kind's
+        // `create`) and parks it in the durable outbox when down, so
+        // creates survive node restarts and replay in order on
+        // reconnect. The outbox FIFO bucket is per-kind
+        // (`create:{kind}`) — creates of one kind replay in
+        // submission order; the entity id itself is node-derived at
+        // replay, so `id` comes back empty with `queued: true`.
+        // `OpKind::Metadata`: creates are idempotent on the
+        // kind-derived entity id, so replay retries are safe.
+        let payload = serde_json::json!({"kind": kind, "indexDoc": init});
+        // Content-keyed idempotency: a webhook/ client retry of the
+        // same create while queued returns the existing entry rather
+        // than double-enqueueing (the entity-id dedup only happens
+        // node-side at replay).
+        let digest = sha2::Sha256::digest(serde_json::to_vec(&payload).unwrap_or_default());
+        let hex: String = digest.iter().fold(String::with_capacity(64), |mut s, b| {
+            use std::fmt::Write;
+            let _ = write!(s, "{b:02x}");
+            s
+        });
+        let idempotency_key = format!("entity.create:{canonical}:{hex}");
+        let outcome = self
+            .engine
+            .submit_op(NodeWrite {
+                node_id,
+                entity_id: format!("create:{canonical}"),
+                entity_kind: Some(canonical.to_string()),
+                op: "entity.create".to_string(),
+                policy: OpKind::Metadata,
+                payload,
+                idempotency_key,
+                ttl_seconds: None,
+            })
+            .await
+            .map_err(err_string)?;
+        Ok(match outcome {
+            hypha_sync::SubmitOutcome::Applied(body) => CreateResultDto {
+                // The replayed create's response body is the kind's
+                // own create payload — `id` when it carries one.
+                id: body
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                entity: None,
+                queued: false,
+            },
+            hypha_sync::SubmitOutcome::Queued(_) => CreateResultDto {
+                id: String::new(),
+                entity: None,
+                queued: true,
+            },
         })
     }
 

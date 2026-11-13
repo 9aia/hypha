@@ -129,6 +129,26 @@ async fn create(state: HyphaState, req: Request<Body>) -> Response {
     plane.create(&ctx, init).await
 }
 
+/// `entity.create` — dispatch a create op to the plane named by
+/// `payload.kind` (the create body verbatim: `{kind, indexDoc?}`).
+/// Same plane resolution + init extraction as [`create`]; the op's
+/// path id is ignored — creates are idempotent on the kind-derived
+/// entity id, so replays dedup for free.
+async fn entity_create(ctx: &EntityContext, payload: Value) -> Response {
+    let plane = match payload.get("kind").and_then(Value::as_str) {
+        Some(kind) => match ctx.kinds.plane(kind) {
+            Some(plane) => plane,
+            None => return kind_not_registered(kind),
+        },
+        None => match ctx.kinds.default_plane() {
+            Some(plane) => plane,
+            None => return kind_not_registered(""),
+        },
+    };
+    let init = payload.get("indexDoc").cloned().unwrap_or(payload);
+    plane.create(ctx, init).await
+}
+
 /// `GET /api/entities/{id}` — the owning plane's entity doc (first
 /// non-404 wins; all-404 answers the last one). `DELETE` is
 /// `entity.delete`.
@@ -185,8 +205,20 @@ pub async fn ops(
     if kind == "entity.delete" || kind == "delete" {
         return delete_entity(&ctx, &id, query.as_deref()).await;
     }
-    // `entity.*` past `delete` is the substrate's own (reserved)
-    // namespace — nothing else lives there yet.
+    // `entity.create` — the replayable-create verb: the hub's durable
+    // outbox carries creates as ops when the owning node is down, and
+    // the drain replays them through this route. The `{id}` path
+    // segment is the outbox's FIFO bucket, not the entity id — the
+    // kind derives the real id inside `create` exactly like
+    // `POST /api/entities` does. Payload shape mirrors the create
+    // body: `{kind, indexDoc}` (`indexDoc` optional — the whole
+    // payload is the init then, `kind` included, same as the
+    // collection route).
+    if kind == "entity.create" {
+        return entity_create(&ctx, payload).await;
+    }
+    // `entity.*` past `delete`/`create` is the substrate's own
+    // (reserved) namespace — nothing else lives there yet.
     if kind.starts_with("entity.") {
         return unknown_op(kind);
     }

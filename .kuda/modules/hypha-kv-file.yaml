@@ -1,0 +1,171 @@
+name: hypha-kv-file
+path: crates/hypha-kv-file/Cargo.toml
+purpose: JSON-file impl of the hypha-kv store port — atomic tmp+rename writes (P-006)
+api:
+- name: Inner
+  kind: type
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 54
+  module: hypha-kv-file
+- name: JsonKvStore
+  kind: type
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 62
+  module: hypha-kv-file
+- name: KvFile
+  kind: type
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 50
+  module: hypha-kv-file
+- name: Namespace
+  kind: type
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 41
+  module: hypha-kv-file
+- name: address_helper
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 362
+  module: hypha-kv-file
+- name: corrupt_file_degrades_to_empty
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 324
+  module: hypha-kv-file
+- name: crud_roundtrip
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 239
+  module: hypha-kv-file
+- name: declare
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 208
+  module: hypha-kv-file
+- name: delete
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 170
+  module: hypha-kv-file
+- name: entries_mut
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 108
+  module: hypha-kv-file
+- name: flat_shape_reads_as_public_namespaces
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 336
+  module: hypha-kv-file
+- name: flush
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 90
+  module: hypha-kv-file
+- name: get
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 156
+  module: hypha-kv-file
+- name: hypha-kv-file
+  kind: module
+  file: crates/hypha-kv-file/Cargo.toml
+  line: 1
+  module: hypha-kv-file
+- name: import
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 218
+  module: hypha-kv-file
+- name: import_merges_entries_and_sets_visibility
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 293
+  module: hypha-kv-file
+- name: list
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 182
+  module: hypha-kv-file
+- name: lock_inner
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 33
+  module: hypha-kv-file
+- name: namespaces
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 190
+  module: hypha-kv-file
+- name: namespaces_are_independent
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 256
+  module: hypha-kv-file
+- name: open
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 70
+  module: hypha-kv-file
+- name: path
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 82
+  module: hypha-kv-file
+- name: persists_across_reopen
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 305
+  module: hypha-kv-file
+- name: read_namespaces
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 118
+  module: hypha-kv-file
+- name: set
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 164
+  module: hypha-kv-file
+- name: temp_store
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 232
+  module: hypha-kv-file
+- name: tests
+  kind: module
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 228
+  module: hypha-kv-file
+- name: visibility
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 201
+  module: hypha-kv-file
+- name: visibility_declared_and_preserved
+  kind: function
+  file: crates/hypha-kv-file/src/lib.rs
+  line: 273
+  module: hypha-kv-file
+deps:
+- hypha-kv
+- serde
+- serde_json
+- tempfile
+- hypha-kv
+- serde
+- serde_json
+notes: ''
+verify:
+- crates/hypha-kv-file/Cargo.toml
+- crates/hypha-kv-file/src/lib.rs
+provenance:
+  files:
+  - crates/hypha-kv-file/Cargo.toml
+  - crates/hypha-kv-file/src/lib.rs
+  hashes:
+  - 0dbf5e6d13d0618e74233baddab06c41c99d0764
+  - a233a45831a07b932cc06d9df7d891ce3aec019a
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

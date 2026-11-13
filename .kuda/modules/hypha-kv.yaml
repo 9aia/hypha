@@ -1,0 +1,53 @@
+name: hypha-kv
+path: crates/hypha-kv/Cargo.toml
+purpose: Node-local key/value store port — namespaced JSON values with per-namespace visibility (P-006)
+api:
+- name: KvOp
+  kind: type
+  file: crates/hypha-kv/src/lib.rs
+  line: 52
+  module: hypha-kv
+- name: KvStore
+  kind: trait
+  file: crates/hypha-kv/src/lib.rs
+  line: 68
+  module: hypha-kv
+- name: NamespaceInfo
+  kind: type
+  file: crates/hypha-kv/src/lib.rs
+  line: 42
+  module: hypha-kv
+- name: Visibility
+  kind: type
+  file: crates/hypha-kv/src/lib.rs
+  line: 32
+  module: hypha-kv
+- name: address
+  kind: function
+  file: crates/hypha-kv/src/lib.rs
+  line: 106
+  module: hypha-kv
+- name: hypha-kv
+  kind: module
+  file: crates/hypha-kv/Cargo.toml
+  line: 1
+  module: hypha-kv
+deps:
+- serde
+- serde_json
+- serde
+- serde_json
+notes: ''
+verify:
+- crates/hypha-kv/Cargo.toml
+- crates/hypha-kv/src/lib.rs
+provenance:
+  files:
+  - crates/hypha-kv/Cargo.toml
+  - crates/hypha-kv/src/lib.rs
+  hashes:
+  - d1b3d4d5eb0274a8681c987069ffd9e9d3528991
+  - f38d0c8be4b8c12c7d1cd0612c309d60cf5220ec
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

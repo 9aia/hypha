@@ -10,6 +10,7 @@ verify:
 - project/TODO.md
 - project/adrs/0001-extraction-from-peregrin-entity-plane-becomes-hypha.md
 - project/adrs/0002-hypha-config-generic-config-loading-for-any-9aia-project.md
+- project/handoffs/T-001.md
 - project/index.md
 provenance:
   files:
@@ -18,14 +19,16 @@ provenance:
   - project/TODO.md
   - project/adrs/0001-extraction-from-peregrin-entity-plane-becomes-hypha.md
   - project/adrs/0002-hypha-config-generic-config-loading-for-any-9aia-project.md
+  - project/handoffs/T-001.md
   - project/index.md
   hashes:
   - 9065e6f6e33503b5f7a4a773acd637396048731c
-  - 043c72083824501be0dd939539075300db2c03eb
+  - aa750b3143903b6ef8169a08a441b154f2daa0b1
   - a764a2b71660da00fe642b6f29934fc2131cf9c3
   - 3bc1a58f8b2751bfe6654254341a67eac58f3d22
   - 75f5c520f7a51a98c6c14b71d57f5fe074c8da5b
+  - 298b9be6d0ba2cc44bbd0e008237633035070590
   - 76616d7a218269e869ca15f4f07468a00fc7eb31
-  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
-  generated_at: '1794371182'
-  generator: kuda-template/0.1.2
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

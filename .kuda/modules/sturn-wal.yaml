@@ -1,0 +1,43 @@
+name: sturn-wal
+path: refs/sturn/wal/devin-ci-bupha
+purpose: sturn coordination WAL — claims, writes, snaps, review events in refs/sturn/*
+api: []
+deps: []
+notes: ''
+verify:
+- refs/sturn/wal/devin-ci-bupha
+- refs/sturn/wal/devin-pl014-e1
+- refs/sturn/wal/devin-t054-outbox
+- refs/sturn/wal/ephemeral-awareness
+- refs/sturn/wal/hypha
+- refs/sturn/wal/hypha-config
+- refs/sturn/wal/main
+- refs/sturn/wal/release-sweep
+- refs/sturn/wal/sync-refs-rollout
+- refs/sturn/wal/t8-6-hypha-provider
+provenance:
+  files:
+  - refs/sturn/wal/devin-ci-bupha
+  - refs/sturn/wal/devin-pl014-e1
+  - refs/sturn/wal/devin-t054-outbox
+  - refs/sturn/wal/ephemeral-awareness
+  - refs/sturn/wal/hypha
+  - refs/sturn/wal/hypha-config
+  - refs/sturn/wal/main
+  - refs/sturn/wal/release-sweep
+  - refs/sturn/wal/sync-refs-rollout
+  - refs/sturn/wal/t8-6-hypha-provider
+  hashes:
+  - 49aaa29cd081fce1bd24b02168ee0d554560e872
+  - c6327d530a8f40af1f17ee928ea054a614e8547d
+  - 7189ddca6ee0dc2a081fac08a9fe115fb528e733
+  - 08d1fd32721cc5932ed029c551216dd2f6e9f68e
+  - becfe07fb7952dc9b860f7c992021ae88ff6c21e
+  - 2d42f1b902af8ca5bc507137d4e117cd24e6ead3
+  - 4d7345a1037477f947e6f80161602e88e1bcef69
+  - e1d7a95a09561d4314bae3f8e7f0daa4bc4f37f6
+  - cf92620821cef5f6bfd28dfea492b223df5492e9
+  - d50565eed75eb45dd0887c32c275930e58a57c57
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

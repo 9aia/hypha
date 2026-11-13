@@ -5,7 +5,7 @@ api:
 - name: CAP
   kind: const
   file: crates/hypha-hub/src/entity_routes.rs
-  line: 232
+  line: 235
   module: hypha-hub
 - name: Canned
   kind: type
@@ -35,7 +35,7 @@ api:
 - name: FakeCreds
   kind: type
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 279
+  line: 287
   module: hypha-hub
 - name: FileCredentials
   kind: type
@@ -45,7 +45,7 @@ api:
 - name: HUB_ACTOR
   kind: const
   file: crates/hypha-hub/src/sync_api.rs
-  line: 182
+  line: 183
   module: hypha-hub
 - name: HubConfig
   kind: type
@@ -55,7 +55,7 @@ api:
 - name: HubNode
   kind: type
   file: crates/hypha-hub/src/sync_api.rs
-  line: 37
+  line: 38
   module: hypha-hub
 - name: HubState
   kind: type
@@ -100,7 +100,7 @@ api:
 - name: Registry
   kind: type
   file: crates/hypha-hub/src/sync_api.rs
-  line: 173
+  line: 174
   module: hypha-hub
 - name: STORE_ENV
   kind: const
@@ -130,7 +130,7 @@ api:
 - name: SyncEntityApi
   kind: type
   file: crates/hypha-hub/src/sync_api.rs
-  line: 198
+  line: 199
   module: hypha-hub
 - name: TestNoticePolicy
   kind: type
@@ -140,7 +140,7 @@ api:
 - name: TestPolicy
   kind: type
   file: crates/hypha-hub/src/sync_api.rs
-  line: 1069
+  line: 1154
   module: hypha-hub
 - name: TestPolicy
   kind: type
@@ -150,17 +150,17 @@ api:
 - name: adopt_credential
   kind: function
   file: crates/hypha-hub/src/sync_api.rs
-  line: 496
+  line: 497
   module: hypha-hub
 - name: adopt_credential_arms
   kind: function
   file: crates/hypha-hub/src/sync_api.rs
-  line: 1050
+  line: 1135
   module: hypha-hub
 - name: api_against
   kind: function
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 252
+  line: 260
   module: hypha-hub
 - name: api_err
   kind: function
@@ -170,12 +170,12 @@ api:
 - name: api_error_arms
   kind: function
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 563
+  line: 630
   module: hypha-hub
 - name: api_for
   kind: function
   file: crates/hypha-hub/src/sync_api.rs
-  line: 1133
+  line: 1218
   module: hypha-hub
 - name: api_for
   kind: function
@@ -202,7 +202,7 @@ api:
   file: crates/hypha-hub/tests/credentials.rs
   line: 251
   module: hypha-hub
-api_omitted: 241
+api_omitted: 244
 deps:
 - async-trait
 - axum
@@ -218,6 +218,7 @@ deps:
 - keyring
 - serde
 - serde_json
+- sha2
 - tokio
 - tower-http
 - tracing
@@ -230,6 +231,7 @@ deps:
 - tower
 - hypha-sync
 - hypha-control
+- sha2
 - futures
 - axum
 - hypha-push
@@ -263,20 +265,20 @@ provenance:
   - crates/hypha-hub/tests/sync_api.rs
   - crates/hypha-hub/tests/transfer.rs
   hashes:
-  - 26e1fee5b2f2be51e13ce7d142af40a32901ab98
+  - 99f47f64d44fdb987ce81719fb2ef41983718bcf
   - d1d2aeec300a54bcd44c0d4231726e479db7de21
   - f6d582ffc94611bf4b4ce7ff061c84107e725b8c
-  - 7b2d958d9c7afa61b5a8e7abc23444c6145052b9
+  - d54b6db7b201e0131533a2d940e2c07a7578f093
   - db73338362417dbe862ebe3b830ecb1fefc2f260
   - 736c988e8d9e9a06b6221a600b985692ea77596a
   - aa0d50c2593e40f172360952049d5142bb1920dc
   - cedd51dd79c20e753cf469ae20849462de936a0d
   - 5bfc682944ac8fb7f11ee81abea66261ad4b8647
-  - 085f02f0c53d0819e39502a6e7dcc18de0cac84b
+  - 9b457405557513435288dc683e5b715380684dc0
   - 964c30fbef20eb96b1aede573f4826e0c71860e5
   - c63eeff307ec1ecd91c66d52f4f24c92d0932699
-  - 6d87c5686b113b50bfe99397e1db6995923ed0f5
+  - 98317468ddb628e9d12d12699d459bbfbf396279
   - cfd3aec231f5356973c0391602fb5e041f502085
-  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
-  generated_at: '1794371182'
-  generator: kuda-template/0.1.2
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
+  generator: kuda-template/0.1.4

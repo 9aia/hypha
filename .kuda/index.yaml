@@ -9,22 +9,27 @@ modules:
 - hypha-http
 - hypha-hub
 - hypha-keyring
+- hypha-kv
+- hypha-kv-file
 - hypha-node
 - hypha-node-api
 - hypha-outbox
 - hypha-push
 - hypha-secret
+- hypha-secret-cuora
+- hypha-serve-cli
 - hypha-service
 - hypha-sync
 - hypha-systemd
 - hypha-telemetry
 - project
+- sturn-wal
 - xtask
 commands:
 - cargo check
 - cargo test --workspace
-tree_digest: 60790dcda8745bb32461fda5f042ad7fcab02334
-files_total: 89
+tree_digest: d7dc9df0fcee89d378e1744c81fe0338da23fe15
+files_total: 111
 provenance:
   files:
   - Cargo.toml
@@ -34,34 +39,42 @@ provenance:
   - crates/hypha-http/Cargo.toml
   - crates/hypha-hub/Cargo.toml
   - crates/hypha-keyring/Cargo.toml
+  - crates/hypha-kv/Cargo.toml
+  - crates/hypha-kv-file/Cargo.toml
   - crates/hypha-node/Cargo.toml
   - crates/hypha-node-api/Cargo.toml
   - crates/hypha-outbox/Cargo.toml
   - crates/hypha-push/Cargo.toml
   - crates/hypha-secret/Cargo.toml
+  - crates/hypha-secret-cuora/Cargo.toml
+  - crates/hypha-serve-cli/Cargo.toml
   - crates/hypha-service/Cargo.toml
   - crates/hypha-sync/Cargo.toml
   - crates/hypha-systemd/Cargo.toml
   - crates/hypha-telemetry/Cargo.toml
   - xtask/Cargo.toml
   hashes:
-  - ba5e5cabddd9856c841d67530d72211aa8af6a5c
+  - 9a452c345e7f72a754905e49e20d68d53c3b35a7
   - 4dec5422c2894d311dd70e1b48bc03d2db615de9
   - a3d961f5c7dfa6278af0976541ad5b46c46b9a8d
   - 61b8f7d9a1ae26565f5cb2fc6f6b7f7e75338e81
-  - 51f2ea80a8fb26b81777c1ca5fbed2b0bd1305cc
-  - 26e1fee5b2f2be51e13ce7d142af40a32901ab98
+  - 0d2001c96062879144b5e0d76e3c8d491d003105
+  - 99f47f64d44fdb987ce81719fb2ef41983718bcf
   - 46cec4a109552d28aad492f0ab6503fd00bfc877
+  - d1b3d4d5eb0274a8681c987069ffd9e9d3528991
+  - 0dbf5e6d13d0618e74233baddab06c41c99d0764
   - 4e2e0616cf09a1048fddfc493d6b9d5907533de1
   - cad127b79c162fee3c9db981f18347a00ccb47c8
   - 817f581000eae7852aaab238fdb69658b571a2fb
   - adc2ec675d3c1f213345e02197d09f88b1ab9da4
   - eecb05c1a07240879c8f134922341966a02c598d
+  - 3ccc1d16e6440a38b49c797adea894239e49adc1
+  - 922fa43fcaad6f3f42f384ea5e55ecd61643a2ae
   - ec8eda6a6ece491b1e21703ff35047bde7ab66ee
   - 1b5dc7314986fe0c4a7eac50ddebc10fab3acfc8
   - 56c345f27d76728ed4c4f11e2d35cbac01d0ce3a
   - 67cb4fbb952e882cb330403520287ae84fed11fb
   - b884f908a56302753d1161daa824eafb87714acb
-  commit_sha: 069ea20735b6b70a682089450ab9bbd817c2bedd
-  generated_at: '1794371182'
+  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
+  generated_at: '1794608621'
   generator: kuda/0.1.0

@@ -1,55 +1,41 @@
 #!/usr/bin/env bash
-# Run manually: `./scripts/release.sh` from the repo root.
-# bupha is deprecated — no watch registration; releases are operator-run.
-# The leading sleep is the debounce window: a newer push kills this
-# run via cancel_running, so only the last push in a quiet window
-# releases. Runs inside a detached worktree — commits/tags are pushed
-# from here, not from the main checkout.
+# hypha release — thin shim over tarsi-serve (the org release plane,
+# project ADR-0005; repo config: ./tarsi.toml). One call runs
+# plan → changelog → bump → tag → push; publish targets are off
+# (ADR-0004: crates.io is tamias-only, GitHub Releases unused).
+# Operator-run on main — `tarsi-serve release` is dry-run by
+# default; --yes is the explicit opt-in.
 #
-# crates.io publish is retired: org policy keeps every repo but tamias
-# off crates.io (the bare names `hypha`/`hypha-hub` are taken there
-# anyway). Distribution rides the tamias packs —
-# `provider/hypha-substrate` ships the `hypha`/`hypha-hub` daemons as
-# systemd services — so a release is one workspace version bump + a
-# `hypha-v<ver>` tag. The operator then publishes the pack itself
-# (`tamias publish provider/hypha-substrate`). Binary dist stays out
-# of scope: there is no release CI (GHA workflows were removed
-# org-wide) and no cargo-installed `hypha`/`hypha-hub` artifact —
-# dev installs use `cargo install --path` (see docs/getting-started).
-# Needs: `cargo-edit` (cargo set-version).
+# Preserved repo step: the tamias provider-pack manifest version is
+# synced to the new version *before* the release commit lands, so
+# the tagged tree carries consistent versions. The pack publish
+# itself stays manual (`tamias publish provider/hypha-substrate`).
 set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
 # worktree-local env (gitignored) — kept for parity with the other
 # org release scripts; nothing here needs secrets today.
 [ -f ./.env ] && { set -a; source ./.env; set +a; }
-sleep "${HYPHA_RELEASE_DEBOUNCE:-300}"
 
-git fetch origin --tags -q
-last="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-if [ -z "$last" ]; then
-    echo "no tags yet — tag the first release manually to seed the flow"; exit 0
+ws_version() { grep -m1 '^version = "' Cargo.toml | cut -d'"' -f2; }
+
+# Learn the version tarsi will bump to (all releasing units share one
+# workspace version — empty output means "don't sync").
+new="$(tarsi-serve plan --dir . | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+if not d.get("ok"): sys.exit(0)
+units=[u for u in d["result"]["plan"]["units"] if u.get("releases")]
+vs={u["new_version"] for u in units}
+print(vs.pop() if len(vs)==1 else "")
+')"
+old="$(ws_version)"
+if [ -n "$new" ] && [ "$new" != "$old" ]; then
+    sed -i "s/^version: \"${old}\"/version: \"${new}\"/" provider/hypha-substrate/tamias.yaml
+    git add provider/hypha-substrate/tamias.yaml
+    git commit -qm "chore(release): sync hypha-substrate@${new} version ref ahead of tarsi bump"
 fi
-changed="$(git diff --name-only "${last}..HEAD")"
 
-# release-worthy paths: workspace crates, the tamias pack payload,
-# xtask, and the release machinery itself. Docs live on the orphan
-# `docs` worktree branch — they never appear in this diff.
-relevant="$(grep -E '^(crates/|provider/|xtask/|Cargo\.(toml|lock)|scripts/release\.sh|dist-workspace\.toml)' <<<"$changed" || true)"
-if [ -z "$relevant" ]; then echo "no release-relevant changes since $last"; exit 0; fi
+tarsi-serve release --dir . --yes
 
-# every crate inherits `version.workspace` — one bump moves them all,
-# and `cargo set-version --workspace` rewrites the workspace.package
-# version, the workspace.dependencies reqs, and Cargo.lock together.
-old="$(grep -m1 '^version = "' Cargo.toml | cut -d'"' -f2)"
-cargo set-version --workspace --bump patch
-ver="$(grep -m1 '^version = "' Cargo.toml | cut -d'"' -f2)"
-
-# keep the user-facing version refs in lockstep: the tamias provider
-# pack manifest.
-sed -i "s/^version: \"${old}\"/version: \"${ver}\"/" provider/hypha-substrate/tamias.yaml
-
-git commit -aqm "release: bump hypha to ${ver} — tamias pack release"
-git tag "hypha-v${ver}"
-git push -q origin HEAD:main --tags
-
-echo "released: hypha ${ver} (tag hypha-v${ver})"
-echo "next: tamias publish provider/hypha-substrate  # ship hypha-substrate@${ver} to the org registry"
+echo "released: hypha ${new:-$old} (tag hypha-v${new:-$old}, per-unit tags for the rest)"
+echo "next: tamias publish provider/hypha-substrate  # ship hypha-substrate@${new:-$old} to the org registry"

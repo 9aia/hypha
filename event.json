@@ -1,1 +1,1 @@
-{"id":"","ws":"sync-refs-rollout","actor":"luis","ts":1794533521,"op":{"op":"claim","glob":"scripts/release.sh","ttl_secs":3600}}
+{"id":"","ws":"sync-refs-rollout","actor":"luis","ts":1794533910,"op":{"op":"presence","status":"left"}}

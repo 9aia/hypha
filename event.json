@@ -1,1 +1,1 @@
-{"id":"","ws":"devin-pl014-e1","actor":"luis","ts":1794528848,"op":{"op":"claim","glob":"fs:scripts/**","ttl_secs":3600}}
+{"id":"","ws":"devin-pl014-e1","actor":"luis","ts":1794529318,"op":{"op":"presence","status":"left"}}

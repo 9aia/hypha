@@ -1,1 +1,1 @@
-{"id":"","ws":"devin-t054-outbox","actor":"luis","ts":1794608127,"op":{"op":"claim","glob":"crates/hypha-node-api/**","ttl_secs":3600}}
+{"id":"","ws":"devin-t054-outbox","actor":"luis","ts":1794608689,"op":{"op":"presence","status":"left"}}

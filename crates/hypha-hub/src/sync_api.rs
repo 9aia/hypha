@@ -654,13 +654,22 @@ impl EntityApi for SyncEntityApi {
             .is_some_and(|row| row.status == hypha_sync::NodeStatus::Up);
         if up {
             let body = serde_json::json!({"kind": kind, "indexDoc": init});
-            let res = tokio::task::spawn_blocking({
-                let client = Arc::clone(&client);
-                move || client.send_json("POST", "/api/entities", &body)
-            })
+            // Bounded by the engine's `submit_timeout`, not the REST
+            // budget — same fail-fast ruling as `submit_op` (T-060):
+            // a node that stopped answering but isn't marked `down`
+            // yet must not hold the create for `request_timeout`; the
+            // orphaned post may still land, the same ambiguity every
+            // transport timeout carries.
+            let res = tokio::time::timeout(
+                self.engine.submit_timeout(),
+                tokio::task::spawn_blocking({
+                    let client = Arc::clone(&client);
+                    move || client.send_json("POST", "/api/entities", &body)
+                }),
+            )
             .await;
             match res {
-                Ok(Ok(res)) => {
+                Ok(Ok(Ok(res))) => {
                     let id = res
                         .get("id")
                         .and_then(Value::as_str)
@@ -685,15 +694,22 @@ impl EntityApi for SyncEntityApi {
                 // Transport failure = fresh evidence the node is
                 // gone — reflect it and fall through to the durable
                 // queue (same ruling as `submit_op`).
-                Ok(Err(e)) if e.is_transport() => {
+                Ok(Ok(Err(e))) if e.is_transport() => {
                     let _ = self
                         .projection()
                         .set_node_status(&node_id, hypha_sync::NodeStatus::Down);
                 }
                 // Delivered and refused — not lost, surface the node's
                 // error verbatim.
-                Ok(Err(e)) => return Err(Self::err_message(e)),
-                Err(e) => return Err(join_err(e)),
+                Ok(Ok(Err(e))) => return Err(Self::err_message(e)),
+                Ok(Err(e)) => return Err(join_err(e)),
+                // The submit budget lapsed — same ruling as a
+                // transport failure: mark down, queue, replay later.
+                Err(_) => {
+                    let _ = self
+                        .projection()
+                        .set_node_status(&node_id, hypha_sync::NodeStatus::Down);
+                }
             }
         }
 

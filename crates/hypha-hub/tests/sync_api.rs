@@ -26,6 +26,17 @@ fn engine_with(
     hypha_sync::ProjectionStore,
     hypha_outbox::Outbox,
 ) {
+    engine_with_options(nodes, SyncOptions::default())
+}
+
+fn engine_with_options(
+    nodes: &[HubNode],
+    options: SyncOptions,
+) -> (
+    SyncHandle,
+    hypha_sync::ProjectionStore,
+    hypha_outbox::Outbox,
+) {
     let projection = hypha_sync::ProjectionStore::in_memory().unwrap();
     let outbox = hypha_outbox::Outbox::in_memory().unwrap();
     let targets = nodes.iter().map(|n| {
@@ -36,12 +47,7 @@ fn engine_with(
         })
     });
     (
-        SyncEngine::spawn(
-            projection.clone(),
-            outbox.clone(),
-            targets,
-            SyncOptions::default(),
-        ),
+        SyncEngine::spawn(projection.clone(), outbox.clone(), targets, options),
         projection,
         outbox,
     )
@@ -582,6 +588,80 @@ async fn create_entity_queues_durably_when_the_node_is_down() {
         .await
         .unwrap();
     assert_eq!(api.pending_ops().await.unwrap().len(), 2);
+}
+
+/// T-060 — a node that stops answering while the projection still
+/// reads `up` (the sync loop hasn't observed the failure yet) must not
+/// hold the create for the full REST budget: the direct fast path is
+/// bounded by the engine's `submit_timeout`, then the create lands in
+/// the durable outbox as `queued` — the ci-ingress webhook path.
+#[tokio::test]
+async fn create_entity_fails_fast_into_outbox_when_node_hangs() {
+    // Blackhole endpoint: accepts TCP, never responds.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    std::thread::spawn(move || {
+        while let Ok((conn, _)) = listener.accept() {
+            std::mem::forget(conn);
+        }
+    });
+    let url = format!("http://127.0.0.1:{port}");
+    let nodes = vec![hub_node("n1", &url)];
+    // `submit_timeout` bounds the direct-delivery probe; the REST
+    // budget stays comfortably past the test's own runtime so the
+    // node loop's probes can't mark the node down first — the window
+    // under test is "status up, node dead".
+    let options = SyncOptions {
+        submit_timeout: std::time::Duration::from_millis(200),
+        request_timeout: std::time::Duration::from_secs(5),
+        ..SyncOptions::default()
+    };
+    let (engine, projection, _outbox) = engine_with_options(&nodes, options);
+    let (_dir, creds) = file_creds();
+    let api = SyncEntityApi::new(engine, nodes, creds).with_policies(test_policies());
+    // The last connect succeeded; the node has since stopped
+    // answering but nothing has marked it down yet. The row is
+    // seeded directly — the supervisor's `upsert_node` is async and
+    // may not have landed yet.
+    projection
+        .upsert_node(&hypha_sync::NodeRef {
+            id: "n1".into(),
+            url: url.clone(),
+            label: "n1".into(),
+        })
+        .unwrap();
+    projection
+        .set_node_status("n1", hypha_sync::NodeStatus::Up)
+        .unwrap();
+
+    let start = std::time::Instant::now();
+    let res = api
+        .create_entity("sepia-session", &json!({"cwd":"/work"}), Some("n1"))
+        .await
+        .unwrap();
+    let elapsed = start.elapsed();
+    assert!(res.queued, "hung node must queue the create");
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "create blocked {elapsed:?} — the submit_timeout bound didn't hold"
+    );
+    assert_eq!(
+        projection.node("n1").unwrap().unwrap().status,
+        hypha_sync::NodeStatus::Down,
+        "the lapsed probe must mark the node down"
+    );
+    let pending = api.pending_ops().await.unwrap();
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].kind, "entity.create");
+
+    // Known-down now: the next create skips the probe outright.
+    let start = std::time::Instant::now();
+    let again = api
+        .create_entity("sepia-session", &json!({"cwd":"/other"}), Some("n1"))
+        .await
+        .unwrap();
+    assert!(again.queued);
+    assert!(start.elapsed() < std::time::Duration::from_secs(1));
 }
 
 /* ---- node-level verbs -------------------------------------------------*/

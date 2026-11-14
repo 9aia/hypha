@@ -35,6 +35,18 @@ pub struct SyncOptions {
     pub connect_timeout: Duration,
     /// End-to-end budget for REST calls (list, post, refetch).
     pub request_timeout: Duration,
+    /// End-to-end budget for the *direct-delivery* attempt in
+    /// [`SyncHandle::submit_op`] — deliberately below
+    /// `request_timeout`: when the node is unreachable but the
+    /// projection still reads `up` (the sync loop hasn't observed the
+    /// failure yet — feed silence alone takes `sse_idle_timeout` to
+    /// trip), the write must fail fast into the durable outbox rather
+    /// than hold the caller for the full REST budget (T-060). An
+    /// elapse is treated exactly like a transport error: the node is
+    /// marked `down` and the op queues for replay. The orphaned
+    /// in-flight post may still land node-side — the same ambiguity
+    /// every transport timeout already carries.
+    pub submit_timeout: Duration,
     /// Max feed silence before the SSE subscription is declared dropped
     /// — reconnected (and the index re-listed) when it lapses. The
     /// node's heartbeats keep a healthy stream open indefinitely; this
@@ -69,6 +81,10 @@ impl Default for SyncOptions {
         Self {
             connect_timeout: Duration::from_secs(5),
             request_timeout: Duration::from_secs(15),
+            // One connect budget plus slack — a node that can't accept
+            // and ack a small op POST within this window is treated as
+            // unreachable and the write queues.
+            submit_timeout: Duration::from_secs(8),
             sse_idle_timeout: Duration::from_secs(60),
             backoff_min: Duration::from_secs(1),
             backoff_max: Duration::from_secs(30),
@@ -236,6 +252,14 @@ impl SyncHandle {
         self.shared.active_pumps.load(Ordering::Relaxed)
     }
 
+    /// The direct-delivery budget [`Self::submit_op`] enforces — the
+    /// hub's synchronous fast paths (entity create) share it so a
+    /// node that stops answering fails fast everywhere, not just on
+    /// op submits (T-060).
+    pub fn submit_timeout(&self) -> Duration {
+        self.shared.options.submit_timeout
+    }
+
     /// The shared pump counter — cloneable so callers can keep
     /// observing teardown after `shutdown()` consumes the handle.
     pub fn pump_counter(&self) -> Arc<AtomicUsize> {
@@ -312,13 +336,22 @@ impl SyncHandle {
             let kind = write.entity_kind.clone();
             let op = write.op.clone();
             let payload = write.payload.clone();
-            let result = blocking(client.clone(), move |c| {
-                c.post_op(&entity_id, kind.as_deref(), &op, &payload)
-            })
+            // Bounded by `submit_timeout`, not `request_timeout` —
+            // the direct-delivery probe must fail fast into the
+            // outbox when the node is gone but not yet marked `down`
+            // (T-060). `timeout` drops the await, not the blocking
+            // post: the orphaned call still finishes on its own
+            // `request_timeout` budget and its result is discarded.
+            let result = tokio::time::timeout(
+                self.shared.options.submit_timeout,
+                blocking(client.clone(), move |c| {
+                    c.post_op(&entity_id, kind.as_deref(), &op, &payload)
+                }),
+            )
             .await;
             match result {
-                Ok(value) => return Ok(SubmitOutcome::Applied(value)),
-                Err(e) if e.is_transport() => {
+                Ok(Ok(value)) => return Ok(SubmitOutcome::Applied(value)),
+                Ok(Err(e)) if e.is_transport() => {
                     // Fresh evidence the node is gone — reflect it and
                     // queue; the loop's reconnect drains in order.
                     let _ = self
@@ -326,7 +359,15 @@ impl SyncHandle {
                         .projection
                         .set_node_status(&write.node_id, NodeStatus::Down);
                 }
-                Err(e) => return Err(SyncError::Node(e)),
+                Ok(Err(e)) => return Err(SyncError::Node(e)),
+                // The submit budget lapsed — same ruling as a
+                // transport failure: mark down, queue, replay later.
+                Err(_) => {
+                    let _ = self
+                        .shared
+                        .projection
+                        .set_node_status(&write.node_id, NodeStatus::Down);
+                }
             }
         }
 
@@ -942,6 +983,7 @@ mod tests {
         SyncOptions {
             connect_timeout: Duration::from_millis(300),
             request_timeout: Duration::from_secs(2),
+            submit_timeout: Duration::from_millis(200),
             sse_idle_timeout: Duration::from_secs(5),
             backoff_min: Duration::from_millis(30),
             backoff_max: Duration::from_millis(200),
@@ -1157,6 +1199,97 @@ mod tests {
         let client =
             NodeClient::with_config(&node.url, None, shared.options.client_config()).unwrap();
         assert!(refetch(&node, &client, &shared, "s1").await.is_err());
+    }
+
+    /// A TCP endpoint that accepts and then never answers — the
+    /// blackhole node: connects succeed, every request hangs until a
+    /// client-side timeout fires.
+    fn blackhole_node() -> String {
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            // Hold every accepted socket open without reading or
+            // writing — requests stall until their own timeout.
+            while let Ok((conn, _)) = listener.accept() {
+                std::mem::forget(conn);
+            }
+        });
+        format!("http://127.0.0.1:{port}")
+    }
+
+    /// T-060 — a node that stops answering while the projection still
+    /// reads `up` (the sync loop hasn't observed the failure yet) must
+    /// not hold `submit_op` for the full `request_timeout`: the direct
+    /// attempt is bounded by `submit_timeout`, then the write lands in
+    /// the outbox and the node flips `down`. The *next* submit skips
+    /// the probe entirely.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn submit_op_fails_fast_into_outbox_when_node_hangs() {
+        let mut opts = options();
+        // A REST budget comfortably past the test's own runtime keeps
+        // the node loop's probes from marking the node down before
+        // the submit under test runs — the window being exercised is
+        // "status still up, node dead". (It also bounds how long the
+        // orphaned post lingers on a blocking thread.)
+        opts.request_timeout = Duration::from_secs(5);
+        let shared = shared_with(opts);
+        let url = blackhole_node();
+        let n = node(url);
+        shared.projection.upsert_node(&n).unwrap();
+        let engine = SyncEngine::spawn(
+            shared.projection.clone(),
+            shared.outbox.clone(),
+            [NodeTarget::new(n.clone())],
+            shared.options.clone(),
+        );
+        // Fresh evidence window: the loop hasn't run a cycle yet, so
+        // the row is `unknown` — pretend the last connect succeeded.
+        shared
+            .projection
+            .set_node_status("n", NodeStatus::Up)
+            .unwrap();
+
+        let write = |key: &str| NodeWrite {
+            node_id: "n".into(),
+            entity_id: "e1".into(),
+            entity_kind: None,
+            op: "op".into(),
+            policy: hypha_outbox::OpKind::Turn,
+            payload: serde_json::json!({}),
+            idempotency_key: key.to_string(),
+            ttl_seconds: None,
+        };
+
+        let start = std::time::Instant::now();
+        let outcome = engine.submit_op(write("k1")).await.unwrap();
+        let elapsed = start.elapsed();
+        assert!(
+            matches!(outcome, SubmitOutcome::Queued(_)),
+            "hung node must queue, got {outcome:?}"
+        );
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "submit blocked {elapsed:?} — the submit_timeout bound didn't hold"
+        );
+        assert_eq!(
+            shared.projection.node("n").unwrap().unwrap().status,
+            NodeStatus::Down,
+            "the lapsed probe must mark the node down"
+        );
+        assert_eq!(shared.outbox.pending_for_node("n").unwrap().len(), 1);
+
+        // Known-down now: the next submit skips the direct attempt
+        // outright — no probe, no wait.
+        let start = std::time::Instant::now();
+        let outcome = engine.submit_op(write("k2")).await.unwrap();
+        assert!(matches!(outcome, SubmitOutcome::Queued(_)));
+        assert!(
+            start.elapsed() < Duration::from_secs(1),
+            "known-down submit must not probe the node"
+        );
+        assert_eq!(shared.outbox.pending_for_node("n").unwrap().len(), 2);
+
+        engine.shutdown().await;
     }
 
     /// Canned node routing on the request path: `/api/events` → the

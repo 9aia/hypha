@@ -56,6 +56,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
+use std::time::Duration;
 
 /// `Secrets` over cuora — CLI or `cuora serve` transport per
 /// [`CuoraTransport`]. Generic over the ref `scope` (the
@@ -175,6 +176,47 @@ pub fn rref(scope: &str, name: &str) -> String {
     format!("cuora://{scope}/{name}")
 }
 
+/// `get` attempts on the CLI transport — transient flakes (T-059:
+/// ~6 empty outputs in ~800 calls) get three tries; the backoff
+/// stays small because the flake clears in milliseconds and the
+/// common path is a single fast local/HTTP read.
+const GET_ATTEMPTS: u32 = 3;
+const GET_RETRY_BACKOFF: Duration = Duration::from_millis(50);
+
+/// The outcome of one `cuora get` invocation, classified for the
+/// retry loop: a definitive answer ends it, anything ambiguous
+/// retries.
+enum GetOnce {
+    /// A value came back — done.
+    Hit(String),
+    /// A definitive "not here" — the engine's not-stored message,
+    /// a guardrail denial, or a usage error. No retry: these
+    /// can't be transient and the fallthrough chain is waiting.
+    Miss,
+    /// Ambiguous — spawn/io failure, empty stdout on a successful
+    /// exit (impossible for a real `put`, which refuses empty
+    /// values), or a nonzero exit that isn't a definitive miss
+    /// (vault transport errors all land here).
+    Retry,
+}
+
+/// Does a failed `cuora get` carry a *definitive* answer — one a
+/// retry can't change? The engine prints `cuora: <msg>` (or
+/// `{"error": …}` under `--json`, which we don't pass) and exits
+/// nonzero for everything, so the message text is the only
+/// signal. The not-stored string is cuora-cli's own miss wording
+/// (`{rref} is not stored in env {env}`); "denied by guardrails"
+/// is its advisory-deny wording; clap usage errors exit 2. Any
+/// drift in those strings degrades to "retry a permanent miss" —
+/// bounded and harmless — never to "retry forever" or a wrong
+/// `Some`.
+fn is_definitive_miss(code: Option<i32>, stderr: &str) -> bool {
+    if code == Some(2) {
+        return true;
+    }
+    stderr.contains("is not stored in env") || stderr.contains("denied by guardrails")
+}
+
 impl Secrets for CuoraSecrets {
     fn get(&self, name: &str) -> Option<String> {
         match self.transport {
@@ -196,28 +238,75 @@ impl Secrets for CuoraSecrets {
 }
 
 impl CuoraSecrets {
-    /// The `cli` transport's `get` — shell `cuora get` per lookup.
+    /// The `cli` transport's `get` — shell `cuora get` per lookup,
+    /// with a bounded retry for transient failures (T-059).
+    ///
+    /// `cuora get` answers a *definitive* miss on stderr +
+    /// nonzero exit (`… is not stored in env …`) and every other
+    /// failure — vault transport flakes, spawn errors, a wedged
+    /// config load — the same way: empty stdout, nonzero exit.
+    /// Collapsing all of that to `None` in one shot turned a ~1%
+    /// transient flake into silent secret misses, so ambiguous
+    /// outcomes get [`GET_ATTEMPTS`] tries with a short backoff.
+    /// Answers that can't be transient — the not-stored message,
+    /// a guardrail denial, a clap usage error (exit 2) — return
+    /// `None` on the first try so the fallthrough chain doesn't
+    /// pay for them.
     fn get_cli(&self, name: &str) -> Option<String> {
-        let o = Command::new(&self.bin)
+        for attempt in 0..GET_ATTEMPTS {
+            if attempt > 0 {
+                std::thread::sleep(GET_RETRY_BACKOFF * attempt);
+            }
+            match self.get_cli_once(name) {
+                GetOnce::Hit(v) => return Some(v),
+                GetOnce::Miss => return None,
+                GetOnce::Retry => {}
+            }
+        }
+        None
+    }
+
+    /// One `cuora get` invocation, classified for [`Self::get_cli`]'s
+    /// retry loop.
+    fn get_cli_once(&self, name: &str) -> GetOnce {
+        let Ok(o) = Command::new(&self.bin)
             .arg("--actor")
             .arg(&self.actor)
             .arg("get")
             .arg(self.rref(name))
             .stdin(Stdio::null())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .output()
-            .ok()?;
+        else {
+            // Spawn/io failure (fork pressure, missing binary on a
+            // flaky PATH) — transient by definition.
+            return GetOnce::Retry;
+        };
         if !o.status.success() {
-            return None;
+            // stderr is small (one `cuora: …` line plus audit
+            // ndjson) — keep enough to classify, cap the read the
+            // pipe already bounded.
+            let err = String::from_utf8_lossy(&o.stderr);
+            return if is_definitive_miss(o.status.code(), &err) {
+                GetOnce::Miss
+            } else {
+                GetOnce::Retry
+            };
         }
         // `cuora get` prints the value via println! — strip exactly
         // one trailing newline (and a CR before it); interior
-        // whitespace is part of the value.
+        // whitespace is part of the value. `put` refuses empty
+        // secrets, so a successful exit can never legitimately
+        // print nothing — empty stdout is itself the flake.
         let mut s = String::from_utf8_lossy(&o.stdout).into_owned();
         if let Some(stripped) = s.strip_suffix('\n') {
             s = stripped.strip_suffix('\r').unwrap_or(stripped).to_string();
         }
-        (!s.is_empty()).then_some(s)
+        if s.is_empty() {
+            GetOnce::Retry
+        } else {
+            GetOnce::Hit(s)
+        }
     }
 
     /// The `cli` transport's `set` — `cuora put` with the value on
@@ -295,6 +384,94 @@ mod tests {
         assert_eq!(CuoraSecrets::new("demo").with_bin(failing).get("X"), None);
         let empty = stub(dir.path(), "#!/bin/sh\nprintf '\\n'\n");
         assert_eq!(CuoraSecrets::new("demo").with_bin(empty).get("X"), None);
+    }
+
+    /// A stub that counts invocations in `$DIR/n` and runs `script`
+    /// with `$n` = the 1-based call number — the retry fixtures.
+    fn counting_stub(dir: &std::path::Path, body: &str) -> PathBuf {
+        let script = format!(
+            "#!/bin/sh\n\
+             n=$(cat '{dir}/n' 2>/dev/null || echo 0)\n\
+             n=$((n+1)); echo $n > '{dir}/n'\n\
+             {body}\n",
+            dir = dir.display(),
+            body = body,
+        );
+        stub(dir, &script)
+    }
+
+    fn calls(dir: &std::path::Path) -> u32 {
+        std::fs::read_to_string(dir.join("n"))
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0)
+    }
+
+    #[test]
+    fn get_retries_transient_failures_then_hits() {
+        // T-059: a vault transport flake exits nonzero with empty
+        // stdout and no definitive wording — the first two calls
+        // fail that way, the third answers.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = counting_stub(
+            dir.path(),
+            "if [ \"$n\" -lt 3 ]; then\n\
+             \x20 echo 'cuora: get https://vault: connection reset' >&2\n\
+             \x20 exit 1\n\
+             fi\nprintf 's3cret\\n'\n",
+        );
+        let s = CuoraSecrets::new("demo").with_bin(bin);
+        assert_eq!(s.get("TOKEN").as_deref(), Some("s3cret"));
+        assert_eq!(calls(dir.path()), 3);
+    }
+
+    #[test]
+    fn get_retries_success_with_empty_stdout() {
+        // exit 0 + empty stdout can't be a real secret (`put`
+        // refuses empty values) — it's the flake shape itself.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = counting_stub(
+            dir.path(),
+            "if [ \"$n\" -eq 1 ]; then printf '\\n'; else printf 'v\\n'; fi\n",
+        );
+        let s = CuoraSecrets::new("demo").with_bin(bin);
+        assert_eq!(s.get("X").as_deref(), Some("v"));
+        assert_eq!(calls(dir.path()), 2);
+    }
+
+    #[test]
+    fn get_treats_not_stored_as_definitive_miss() {
+        // The engine's miss wording (`{rref} is not stored in env
+        // {env}` on stderr, exit 1) is a real answer — no retry,
+        // so the fallthrough chain doesn't pay for it.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = counting_stub(
+            dir.path(),
+            "echo 'cuora: cuora://demo/X is not stored in env dev' >&2\nexit 1\n",
+        );
+        let s = CuoraSecrets::new("demo").with_bin(bin);
+        assert_eq!(s.get("X"), None);
+        assert_eq!(calls(dir.path()), 1);
+    }
+
+    #[test]
+    fn get_gives_up_after_the_retry_budget() {
+        // A *persistent* ambiguous failure exhausts the budget and
+        // still answers None — retry must not loop forever.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = counting_stub(dir.path(), "echo 'cuora: vault unreachable' >&2\nexit 1\n");
+        let s = CuoraSecrets::new("demo").with_bin(bin);
+        assert_eq!(s.get("X"), None);
+        assert_eq!(calls(dir.path()), GET_ATTEMPTS);
+    }
+
+    #[test]
+    fn get_answers_none_when_the_binary_cannot_spawn() {
+        // Spawn/io failure is transient-shaped but bounded — a
+        // missing binary retries then misses.
+        let dir = tempfile::tempdir().unwrap();
+        let s = CuoraSecrets::new("demo").with_bin(dir.path().join("no-such-cuora"));
+        assert_eq!(s.get("X"), None);
     }
 
     #[test]

@@ -146,19 +146,36 @@ impl CuoraServe {
     /// empty-stdout rule. `not_found`, `denied`, transport errors,
     /// and a missing binary all collapse to `None` — "not here" —
     /// so secret-chain fallthrough is identical across transports.
+    ///
+    /// Transient answers retry with the same bounded budget as the
+    /// CLI leg (T-059): a dead child already retries inside
+    /// [`Self::call`], but an `ok:false` `op_error`/`pdp_unreachable`
+    /// is a *cuora* answer — a vault transport flake wearing a
+    /// well-formed reply — which used to collapse straight to
+    /// `None`. Definitive codes (`not_found`, `denied`,
+    /// `bad_request`, `unknown_op`) still miss on the first reply.
     pub fn get(&self, rref: &str) -> Option<String> {
-        let reply = self.call(&json!({
-            "op": "get",
-            "ref": rref,
-            "actor": self.actor,
-        }));
-        let value = reply
-            .ok()?
-            .get("result")?
-            .get("value")?
-            .as_str()?
-            .to_string();
-        (!value.is_empty()).then_some(value)
+        for attempt in 0..crate::GET_ATTEMPTS {
+            if attempt > 0 {
+                thread::sleep(crate::GET_RETRY_BACKOFF * attempt);
+            }
+            let Ok(reply) = self.call(&json!({
+                "op": "get",
+                "ref": rref,
+                "actor": self.actor,
+            })) else {
+                continue;
+            };
+            if reply.get("ok").and_then(Value::as_bool) != Some(true) {
+                if transient_reply(&reply) {
+                    continue;
+                }
+                return None;
+            }
+            let value = reply.get("result")?.get("value")?.as_str()?.to_string();
+            return (!value.is_empty()).then_some(value);
+        }
+        None
     }
 
     /// `put` — store `value` under `rref`. The value rides the
@@ -384,6 +401,24 @@ impl fmt::Debug for CuoraServe {
     }
 }
 
+/// Is an `ok:false` reply a *transient* answer worth retrying?
+/// `op_error` wraps vault/ops failures (HTTP flakes, decrypt
+/// transport errors) and `pdp_unreachable` is a policy engine
+/// that may come back; `not_found`/`denied`/`bad_request`/
+/// `unknown_op` are definitive — a retry can't change them.
+/// Unknown future codes default to definitive: retrying is the
+/// risky direction (it can mask a real denial behind latency),
+/// missing is the safe one.
+fn transient_reply(reply: &Value) -> bool {
+    matches!(
+        reply
+            .get("error")
+            .and_then(|e| e.get("code"))
+            .and_then(Value::as_str),
+        Some("op_error" | "pdp_unreachable")
+    )
+}
+
 /// `"code: message"` for an `ok:false` reply — diagnostics only.
 fn reply_error(reply: &Value) -> String {
     reply.get("error").map_or_else(
@@ -413,7 +448,10 @@ mod tests {
     /// mid-request. `$DIR/die-after` makes the *running* child exit
     /// right after its next reply — death between requests.
     /// `$DIR/hang` makes every spawn sleep forever — the timeout
-    /// trigger.
+    /// trigger. `$DIR/operr-<key>` makes the next `get` for that
+    /// key answer a transient `op_error` once (consumed);
+    /// `$DIR/operr-always` makes every `get` answer it — the
+    /// T-059 retry-budget fixtures.
     fn stub(dir: &std::path::Path, extra: &str) -> PathBuf {
         let script = format!(
             "#!/bin/sh\n\
@@ -434,7 +472,10 @@ mod tests {
                case \"$op\" in\n\
                  get)\n\
                    f=\"$dir/db-$key\"\n\
-                   if [ -f \"$f\" ]; then\n\
+                   if [ -f \"$dir/operr-always\" ] || [ -f \"$dir/operr-$key\" ]; then\n\
+                     rm -f \"$dir/operr-$key\"\n\
+                     printf '{{\"id\":1,\"ok\":false,\"error\":{{\"code\":\"op_error\",\"message\":\"vault transport\"}}}}\\n'\n\
+                   elif [ -f \"$f\" ]; then\n\
                      v=$(cat \"$f\")\n\
                      printf '{{\"id\":1,\"ok\":true,\"result\":{{\"ref\":\"%s\",\"value\":\"%s\"}}}}\\n' \"$ref\" \"$v\"\n\
                    else\n\
@@ -541,5 +582,66 @@ mod tests {
         let serve = CuoraServe::new(PathBuf::from("/nonexistent/cuora"), "test-actor");
         assert_eq!(serve.get("cuora://test/X"), None);
         assert!(serve.put("cuora://test/X", "v").is_err());
+    }
+
+    #[test]
+    fn get_retries_a_transient_op_error_reply() {
+        // T-059: an `ok:false` `op_error` is a vault transport flake
+        // wearing a well-formed reply — it must not collapse to
+        // `None` on the first answer.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = stub(dir.path(), "");
+        let serve = CuoraServe::new(bin, "test-actor");
+        serve.put("cuora://test/T", "sekret").unwrap();
+        std::fs::write(dir.path().join("operr-T"), "").unwrap();
+        assert_eq!(serve.get("cuora://test/T").as_deref(), Some("sekret"));
+        // The one-shot file is consumed — a second get is clean.
+        assert!(!dir.path().join("operr-T").exists());
+        assert_eq!(serve.get("cuora://test/T").as_deref(), Some("sekret"));
+    }
+
+    #[test]
+    fn get_gives_up_after_the_retry_budget() {
+        // A *persistent* transient answer exhausts the same bounded
+        // budget as the CLI leg, then answers None.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = stub(dir.path(), "");
+        std::fs::write(dir.path().join("operr-always"), "").unwrap();
+        let serve = CuoraServe::new(bin, "test-actor");
+        assert_eq!(serve.get("cuora://test/X"), None);
+    }
+
+    #[test]
+    fn get_does_not_retry_definitive_codes() {
+        // `not_found` is the engine's real miss — retrying it would
+        // stall every fallthrough lookup. The stub only counts
+        // *spawns*, not replies, so pin the behavior differently:
+        // a definitive miss returns None while a same-session
+        // transient still retries (covered above). Here we assert
+        // the classification helper directly.
+        let transient = serde_json::json!({
+            "id": 1, "ok": false,
+            "error": {"code": "op_error", "message": "x"}
+        });
+        let pdp = serde_json::json!({
+            "id": 1, "ok": false,
+            "error": {"code": "pdp_unreachable", "message": "x"}
+        });
+        let definitive = serde_json::json!({
+            "id": 1, "ok": false,
+            "error": {"code": "not_found", "message": "x"}
+        });
+        let denied = serde_json::json!({
+            "id": 1, "ok": false,
+            "error": {"code": "denied", "message": "x"}
+        });
+        let unknown = serde_json::json!({"id": 1, "ok": false});
+        assert!(transient_reply(&transient));
+        assert!(transient_reply(&pdp));
+        assert!(!transient_reply(&definitive));
+        assert!(!transient_reply(&denied));
+        // No error object / unknown code → definitive (miss is the
+        // safe direction).
+        assert!(!transient_reply(&unknown));
     }
 }

@@ -100,7 +100,7 @@ api:
 - name: NodeWrite
   kind: type
   file: crates/hypha-sync/src/lib.rs
-  line: 793
+  line: 799
   module: hypha-sync
 - name: Notice
   kind: type
@@ -120,7 +120,7 @@ api:
 - name: ProjectionStore
   kind: type
   file: crates/hypha-sync/src/lib.rs
-  line: 291
+  line: 297
   module: hypha-sync
 - name: PumpMsg
   kind: type
@@ -190,19 +190,19 @@ api:
 - name: apply_listing
   kind: function
   file: crates/hypha-sync/src/lib.rs
-  line: 502
+  line: 508
   module: hypha-sync
 - name: apply_listing_summary_without_updated_at
   kind: function
   file: crates/hypha-sync/tests/projection.rs
-  line: 239
+  line: 289
   module: hypha-sync
 - name: apply_patch
   kind: function
   file: crates/hypha-sync/src/lib.rs
-  line: 552
+  line: 558
   module: hypha-sync
-api_omitted: 166
+api_omitted: 168
 deps:
 - hypha-outbox
 - rusqlite
@@ -246,9 +246,9 @@ provenance:
   - 715341a4ab3716caa83d5c400bfc1adfa258731f
   - 1329d346a4c97ca45aa33a80922fce2bd7c9a964
   - 26215828dcd344c1110f1a930c0a73a1e9df1ce9
-  - 0a4534cd723cb8b81b505f58abcead23301f3a1b
+  - e36d6a5294f13406ab155e2d71fc756d1aab3fec
   - 6a6d0c556cd61d21e7c5bd1afae7adc44ffb21bc
-  - b1ca0edf6474b85b91fa0c0b21897c95a110193a
-  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
-  generated_at: '1794608621'
+  - c56f6aad85470634cf8a40bf1589e48c8d9d9311
+  commit_sha: 7a13236bbc2056a72eab9d22cf35988e7d62c489
+  generated_at: '1794621615'
   generator: kuda-template/0.1.4

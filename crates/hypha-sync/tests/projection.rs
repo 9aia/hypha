@@ -236,6 +236,56 @@ fn projection_surfaces_corrupt_rows() {
 }
 
 #[test]
+fn envelope_columns_come_from_the_wrap_not_indexdoc() {
+    // `kind="ci-job"`/`"campaign"` docs carry `updatedAt`/`locked`/`live`
+    // only on the `{id,kind,indexDoc,…}` wrap — the indexDoc is the
+    // kind's own spec and doesn't repeat them. The projection must
+    // read the envelope, not dig into indexDoc (T-061).
+    let store = ProjectionStore::in_memory().unwrap();
+    let ci_job = json!({
+        "id": "repo:main:abc123",
+        "kind": "ci-job",
+        "indexDoc": {"key": "repo", "event": "push", "state": "running", "attempt": 1},
+        "updatedAt": "2024-01-03T00:00:00.000Z",
+        "locked": true,
+        "live": true,
+    });
+    store.apply_listing("n1", &[ci_job]).unwrap();
+    let got = store.entity("n1", "repo:main:abc123").unwrap().unwrap();
+    assert_eq!(got.kind, "ci-job");
+    assert_eq!(got.updated_at, "2024-01-03T00:00:00.000Z");
+    assert!(got.locked);
+    assert!(got.live);
+    // The cursor tracks the wrap's updatedAt too.
+    assert_eq!(
+        store.cursor("n1").unwrap().as_deref(),
+        Some("2024-01-03T00:00:00.000Z")
+    );
+
+    // Wrap fields win over same-named indexDoc fields; a bare doc
+    // (no indexDoc) still reads its own fields.
+    let wrapped = json!({
+        "id": "e2", "kind": "k",
+        "indexDoc": {"id": "inner", "updatedAt": "inner-ts", "live": true},
+        "updatedAt": "outer-ts", "live": false,
+    });
+    store.upsert_entity("n1", &wrapped).unwrap();
+    let got = store.entity("n1", "e2").unwrap().unwrap();
+    assert_eq!(got.entity_id, "e2");
+    assert_eq!(got.updated_at, "outer-ts");
+    assert!(!got.live);
+    store
+        .upsert_entity(
+            "n1",
+            &json!({"id":"e3","kind":"k","updatedAt":"bare-ts","locked":true}),
+        )
+        .unwrap();
+    let got = store.entity("n1", "e3").unwrap().unwrap();
+    assert_eq!(got.updated_at, "bare-ts");
+    assert!(got.locked);
+}
+
+#[test]
 fn apply_listing_summary_without_updated_at() {
     // Missing `updatedAt` → the `if let Some(u)` else arm; the cursor
     // stays unset.

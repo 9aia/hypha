@@ -192,32 +192,38 @@ fn now_rfc3339() -> String {
         .unwrap_or_default()
 }
 
+/// One entity doc's envelope lookup. The wire contract puts the
+/// substrate columns (`id`, `kind`, `updatedAt`, `locked`, `live`) on
+/// the `{id,kind,indexDoc,…}` wrap — kinds whose `indexDoc` doesn't
+/// repeat them (ci-job, campaign) would otherwise project empty
+/// columns. `indexDoc` is the fallback for docs that only carry the
+/// fields inside; explicit `null` on the wrap reads as absent.
+fn envelope<'a>(raw: &'a Value, key: &str) -> Option<&'a Value> {
+    let present = |v: Option<&'a Value>| v.filter(|v| !v.is_null());
+    present(raw.get(key)).or_else(|| match raw.get("indexDoc") {
+        Some(d) if d.is_object() => present(d.get(key)),
+        _ => None,
+    })
+}
+
 /// Pull the column values out of one wire entity doc — unknown/missing
-/// fields degrade to defaults rather than failing the row. Docs that
-/// carry `indexDoc` (the `{id,kind,indexDoc}` entity wrap) derive
-/// their fields from inside it; kind-specific aliases (`busy` →
-/// `live`) are the kind policy's [`KindPolicy::columns`] override.
+/// fields degrade to defaults rather than failing the row. Envelope
+/// fields resolve wrap-first via [`envelope`]; kind-specific aliases
+/// (`busy` → `live`) are the kind policy's [`KindPolicy::columns`]
+/// override.
 pub(crate) fn columns_of(raw: &Value) -> IndexedEntity {
-    let doc = match raw.get("indexDoc") {
-        Some(d) if d.is_object() => d,
-        _ => raw,
+    let text = |k: &str| {
+        envelope(raw, k)
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string()
     };
-    let get = |k: &str| doc.get(k).and_then(Value::as_str).unwrap_or_default();
-    let flag = |k: &str| doc.get(k).and_then(Value::as_bool).unwrap_or(false);
+    let flag = |k: &str| envelope(raw, k).and_then(Value::as_bool).unwrap_or(false);
     IndexedEntity {
         node_id: String::new(),
-        entity_id: raw
-            .get("id")
-            .or_else(|| doc.get("id"))
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string(),
-        kind: raw
-            .get("kind")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string(),
-        updated_at: get("updatedAt").to_string(),
+        entity_id: text("id"),
+        kind: text("kind"),
+        updated_at: text("updatedAt"),
         locked: flag("locked"),
         live: flag("live"),
         raw: raw.clone(),
@@ -509,10 +515,10 @@ impl ProjectionStore {
         let mut max_updated = String::new();
         for doc in docs {
             write_row(&tx, node_id, doc, &self.policies)?;
-            if let Some(id) = doc.get("id").and_then(Value::as_str) {
+            if let Some(id) = envelope(doc, "id").and_then(Value::as_str) {
                 keep.push(id.to_string());
             }
-            if let Some(u) = doc.get("updatedAt").and_then(Value::as_str) {
+            if let Some(u) = envelope(doc, "updatedAt").and_then(Value::as_str) {
                 if u > max_updated.as_str() {
                     max_updated = u.to_string();
                 }

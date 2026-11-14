@@ -1,1 +1,1 @@
-{"id":"","ws":"hypha","actor":"luis","ts":1794503404,"op":{"op":"presence","status":"left"}}
+{"id":"","ws":"hypha","actor":"luis","ts":1794615922,"op":{"op":"claim","glob":"crates/hypha-secret-cuora/**","ttl_secs":3600}}

@@ -2,7 +2,7 @@
 //! `unauthorizedResponse` plus the login/logout cookie exchange and
 //! `POST /api/pair` code redemption. Substrate routes only: the
 //! per-session SSE `?access_token` path is the integration's to add
-//! (see [`is_query_token_path`]).
+//! (see `is_query_token_path`).
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 

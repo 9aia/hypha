@@ -16,7 +16,7 @@
 //!   per-call process is cheap and needs no shared mutable state.
 //! - `serve` — a persistent `cuora serve` child speaking the
 //!   ndjson JSON-RPC wire (`cuora-serve/1`) on stdio — see
-//!   [`serve`]/[`CuoraServe`]. Spawned lazily on first use, reused
+//!   `serve`/[`CuoraServe`]. Spawned lazily on first use, reused
 //!   for the client's lifetime, respawned on death. This is the
 //!   transport `cuora serve` exists for (orchestrator embedding).
 //!

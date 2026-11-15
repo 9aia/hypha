@@ -104,7 +104,7 @@ enum Fail {
 
 /// Persistent `cuora serve` client. Spawn is lazy — construction is
 /// free; the child appears on the first request. Cloning shares the
-/// child via [`Arc`] at the [`crate::CuoraSecrets`] layer; `CuoraServe`
+/// child via [`Arc`](std::sync::Arc) at the [`crate::CuoraSecrets`] layer; `CuoraServe`
 /// itself is not `Clone`.
 pub struct CuoraServe {
     /// The `cuora` binary — the consumer's `*_CUORA_BIN` override or
@@ -120,7 +120,7 @@ pub struct CuoraServe {
 
 impl CuoraServe {
     /// A client over `bin` attributing requests to `actor` with
-    /// [`DEFAULT_TIMEOUT`].
+    /// `DEFAULT_TIMEOUT`.
     #[must_use]
     pub fn new(bin: PathBuf, actor: impl Into<String>) -> Self {
         Self {
@@ -149,7 +149,7 @@ impl CuoraServe {
     ///
     /// Transient answers retry with the same bounded budget as the
     /// CLI leg (T-059): a dead child already retries inside
-    /// [`Self::call`], but an `ok:false` `op_error`/`pdp_unreachable`
+    /// `Self::call`, but an `ok:false` `op_error`/`pdp_unreachable`
     /// is a *cuora* answer — a vault transport flake wearing a
     /// well-formed reply — which used to collapse straight to
     /// `None`. Definitive codes (`not_found`, `denied`,

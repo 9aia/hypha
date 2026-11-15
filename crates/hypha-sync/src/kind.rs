@@ -269,7 +269,7 @@ impl KindPolicies {
     /// override merged field-by-field over the generic rules. The
     /// generic rules unwrap the `{indexDoc}` interim wrap and read
     /// `updatedAt`/`locked`/`live` tolerantly (`live` also honors the
-    /// legacy `busy` alias) — see [`crate::columns_of`].
+    /// legacy `busy` alias) — see `crate::columns_of`.
     pub fn columns_of(&self, raw: &Value) -> IndexedEntity {
         let mut row = crate::columns_of(raw);
         if let Some(cols) = self.for_entity_kind(&row.kind).and_then(|p| p.columns(raw)) {

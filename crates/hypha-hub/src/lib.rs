@@ -265,7 +265,7 @@ async fn trace_layer(req: Request<Body>, next: Next) -> Response {
     .await
 }
 
-/// HubState for a running hub: the sync engine + [`SyncEntityApi`].
+/// HubState for a running hub: the sync engine + [`SyncEntityApi`](crate::sync_api::SyncEntityApi).
 /// `HYPHA_NODES` (`id=url[@token];…`) wins; `HYPHA_NODE_URL`/`HYPHA_NODE_TOKEN`
 /// is the single-node shorthand. Nodes listed without a token resolve
 /// one from the [`credentials`] store (OS keyring → file fallback —

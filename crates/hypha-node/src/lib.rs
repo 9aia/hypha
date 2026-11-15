@@ -8,7 +8,7 @@
 //! namespace) still works end-to-end. Integrations
 //! (peregrin's session plane, campaign planes, …) compose
 //! [`state`] themselves: build a [`HyphaState`], register their
-//! [`EntityPlane`]s via [`HyphaState::with_kind`], and hand it to
+//! [`EntityPlane`](hypha_http::EntityPlane)s via [`HyphaState::with_kind`], and hand it to
 //! [`serve_state`].
 
 use std::net::SocketAddr;

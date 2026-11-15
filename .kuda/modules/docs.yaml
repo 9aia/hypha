@@ -9,23 +9,26 @@ verify:
 - docs/explanation/architecture.md
 - docs/explanation/boundary.md
 - docs/explanation/model.md
+- docs/gen-cli-docs.py
+- docs/gen-crate-map.py
 - docs/getting-started.md
 - docs/how-to/read-the-ledger.md
 - docs/how-to/run-the-tests.md
 - docs/index.md
-- docs/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
-- docs/reference/crates.md
 provenance:
   files:
   - docs/explanation/architecture.md
   - docs/explanation/boundary.md
   - docs/explanation/model.md
+  - docs/gen-cli-docs.py
+  - docs/gen-crate-map.py
   - docs/getting-started.md
   - docs/how-to/read-the-ledger.md
   - docs/how-to/run-the-tests.md
   - docs/index.md
   - docs/package.json
   - docs/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
+  - docs/reference/cli.md
   - docs/reference/crates.md
   - docs/reference/environment.md
   - docs/reference/wire-api.md
@@ -34,16 +37,19 @@ provenance:
   - f4f01e9433fa6c49ed3bec618da7a5dce56f63a4
   - eda435aa4113ac7b0d35b4cfa61c3c968e20e86f
   - 31c34f85d32f131251ec0b09b3407899163a5612
+  - 4986fa09ceb4ff6a854eab1e59f4ca4af0547ae7
+  - edda843c4075421571ff53f4ca648cdd49226f75
   - 94b39e8ed66741f14eeecb153421359fe3b8f422
   - cdddb2da0143b6b095fa88ed67a34db45fa3a18f
   - ba0f053ed057793d15bf998a87318faed0b575f5
   - 6b1abbce6eeebfac846b0377506d6e79da6f3028
-  - 12832317eec887a233d2309473a85a58697bb4ed
+  - 1cbedc1a1cb2e11c60163d39d5bcd20ebbc85201
   - 175fa4f47aecdc02e902d243a1c29914eb2ee258
-  - 11b43065347b418ff92a0416317fefa946d60621
+  - bff3da4c200a133eafae6984b6e7d41cad5251be
+  - 8d85b8ce4b419e6d427e42fc7e0a60433b7e86a6
   - 969a0757dfc579b22258685f4294c4e7080a31fd
   - 04f1313b2b9f405710c86e2f2569697e4ef7f68e
   - 5db1b296e0837ae59fdd74bb3b801aedaea566e3
-  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
-  generated_at: '1794608621'
+  commit_sha: 1120e96ad9217dd489a9e33bda7706ad0d6d2934
+  generated_at: '1794726698'
   generator: kuda-template/0.1.4

@@ -10,12 +10,12 @@ api:
 - name: Cmd
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 209
+  line: 225
   module: hypha-sync
 - name: CycleEnd
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 447
+  line: 488
   module: hypha-sync
 - name: DiffTombstone
   kind: type
@@ -95,7 +95,7 @@ api:
 - name: NodeTarget
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 105
+  line: 121
   module: hypha-sync
 - name: NodeWrite
   kind: type
@@ -125,7 +125,7 @@ api:
 - name: PumpMsg
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 150
+  line: 166
   module: hypha-sync
 - name: SCHEMA
   kind: const
@@ -135,17 +135,17 @@ api:
 - name: Shared
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 137
+  line: 153
   module: hypha-sync
 - name: SubmitOutcome
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 127
+  line: 143
   module: hypha-sync
 - name: SyncEngine
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 162
+  line: 178
   module: hypha-sync
 - name: SyncError
   kind: type
@@ -155,7 +155,7 @@ api:
 - name: SyncHandle
   kind: type
   file: crates/hypha-sync/src/engine.rs
-  line: 215
+  line: 231
   module: hypha-sync
 - name: SyncOptions
   kind: type
@@ -175,17 +175,17 @@ api:
 - name: active_pumps
   kind: function
   file: crates/hypha-sync/src/engine.rs
-  line: 235
+  line: 251
   module: hypha-sync
 - name: add_node
   kind: function
   file: crates/hypha-sync/src/engine.rs
-  line: 253
+  line: 277
   module: hypha-sync
 - name: apply_event
   kind: function
   file: crates/hypha-sync/src/engine.rs
-  line: 831
+  line: 872
   module: hypha-sync
 - name: apply_listing
   kind: function
@@ -202,7 +202,7 @@ api:
   file: crates/hypha-sync/src/lib.rs
   line: 558
   module: hypha-sync
-api_omitted: 168
+api_omitted: 171
 deps:
 - hypha-outbox
 - rusqlite
@@ -244,11 +244,11 @@ provenance:
   hashes:
   - 1b5dc7314986fe0c4a7eac50ddebc10fab3acfc8
   - 715341a4ab3716caa83d5c400bfc1adfa258731f
-  - 1329d346a4c97ca45aa33a80922fce2bd7c9a964
+  - 6c9225765c7e70fcdd954cca4977f28463df14f6
   - 26215828dcd344c1110f1a930c0a73a1e9df1ce9
   - e36d6a5294f13406ab155e2d71fc756d1aab3fec
   - 6a6d0c556cd61d21e7c5bd1afae7adc44ffb21bc
   - c56f6aad85470634cf8a40bf1589e48c8d9d9311
-  commit_sha: 7a13236bbc2056a72eab9d22cf35988e7d62c489
-  generated_at: '1794621615'
+  commit_sha: 1120e96ad9217dd489a9e33bda7706ad0d6d2934
+  generated_at: '1794726698'
   generator: kuda-template/0.1.4

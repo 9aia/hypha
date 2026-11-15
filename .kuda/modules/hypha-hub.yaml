@@ -10,7 +10,7 @@ api:
 - name: Canned
   kind: type
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 120
+  line: 126
   module: hypha-hub
 - name: Canned
   kind: type
@@ -35,7 +35,7 @@ api:
 - name: FakeCreds
   kind: type
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 287
+  line: 293
   module: hypha-hub
 - name: FileCredentials
   kind: type
@@ -140,12 +140,12 @@ api:
 - name: TestPolicy
   kind: type
   file: crates/hypha-hub/src/sync_api.rs
-  line: 1154
+  line: 1170
   module: hypha-hub
 - name: TestPolicy
   kind: type
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 61
+  line: 67
   module: hypha-hub
 - name: adopt_credential
   kind: function
@@ -155,12 +155,12 @@ api:
 - name: adopt_credential_arms
   kind: function
   file: crates/hypha-hub/src/sync_api.rs
-  line: 1135
+  line: 1151
   module: hypha-hub
 - name: api_against
   kind: function
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 260
+  line: 266
   module: hypha-hub
 - name: api_err
   kind: function
@@ -170,12 +170,12 @@ api:
 - name: api_error_arms
   kind: function
   file: crates/hypha-hub/tests/sync_api.rs
-  line: 630
+  line: 710
   module: hypha-hub
 - name: api_for
   kind: function
   file: crates/hypha-hub/src/sync_api.rs
-  line: 1218
+  line: 1234
   module: hypha-hub
 - name: api_for
   kind: function
@@ -202,7 +202,7 @@ api:
   file: crates/hypha-hub/tests/credentials.rs
   line: 251
   module: hypha-hub
-api_omitted: 244
+api_omitted: 246
 deps:
 - async-trait
 - axum
@@ -274,11 +274,11 @@ provenance:
   - aa0d50c2593e40f172360952049d5142bb1920dc
   - cedd51dd79c20e753cf469ae20849462de936a0d
   - 5bfc682944ac8fb7f11ee81abea66261ad4b8647
-  - 9b457405557513435288dc683e5b715380684dc0
+  - 9eb7a5bafe278d25ca0a26580e480483e5a269e5
   - 964c30fbef20eb96b1aede573f4826e0c71860e5
   - c63eeff307ec1ecd91c66d52f4f24c92d0932699
-  - 98317468ddb628e9d12d12699d459bbfbf396279
+  - 5f1da3f25e5e8b95e02aa3f8c7869dec7c997446
   - cfd3aec231f5356973c0391602fb5e041f502085
-  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
-  generated_at: '1794608621'
+  commit_sha: 1120e96ad9217dd489a9e33bda7706ad0d6d2934
+  generated_at: '1794726698'
   generator: kuda-template/0.1.4

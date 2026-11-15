@@ -1,5 +1,5 @@
 ---
-url: /hypha/getting-started.md
+url: /hypha/tutorials/getting-started.md
 ---
 # Getting started
 
@@ -51,8 +51,8 @@ curl localhost:13000/api/entity-index  # merged index (one row)
 curl localhost:13000/api/pending-ops   # outbox depth
 ```
 
-See [Environment](reference/environment.md) for the full `HYPHA_*`
-surface and [Wire API](reference/wire-api.md) for the routes.
+See [Environment](/reference/environment.md) for the full `HYPHA_*`
+surface and [Wire API](/reference/wire-api.md) for the routes.
 
 ## Upgrading from peregrin — secrets move
 
@@ -69,12 +69,12 @@ migration** — old entries are orphaned, not moved. After upgrading:
 
 ## Where next
 
-* [Your first entity](tutorials/first-entity.md) — the entity model
+* [Your first entity](/tutorials/first-entity.md) — the entity model
   end to end, with wire shapes.
-* [Run a node and hub](how-to/run-a-node.md) — the two binaries up
+* [Run a node and hub](/how-to/run-a-node.md) — the two binaries up
   and answering.
-* [Architecture](explanation/architecture.md) — planes, nodes, hub.
-* [Concepts](explanation/concepts.md) ·
-  [decisions](explanation/decisions.md) ·
-  [boundary](explanation/boundary.md) — what hypha owns vs sepia and
+* [Architecture](/explanation/architecture.md) — planes, nodes, hub.
+* [Concepts](/explanation/concepts.md) ·
+  [decisions](/explanation/decisions.md) ·
+  [boundary](/explanation/boundaries.md) — what hypha owns vs sepia and
   peregrin.

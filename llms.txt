@@ -21,7 +21,7 @@ Entities, ops, snapshots, and locks across your machines — the connective laye
 - [Architecture](/hypha/explanation/architecture.md)
 - [Concepts](/hypha/explanation/concepts.md)
 - [Decisions](/hypha/explanation/decisions.md)
-- [Boundary with sepia and peregrin](/hypha/explanation/boundary.md)
+- [Boundaries](/hypha/explanation/boundaries.md)
 
 ### Reference
 
@@ -32,5 +32,5 @@ Entities, ops, snapshots, and locks across your machines — the connective laye
 
 ### Other
 
-- [Getting started](/hypha/getting-started.md)
+- [Getting started](/hypha/tutorials/getting-started.md)
 - [Untitled](/hypha/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md)

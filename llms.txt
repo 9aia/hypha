@@ -8,7 +8,7 @@ Entities, ops, snapshots, and locks across your machines — the connective laye
 
 ### Tutorials
 
-- [Your first entity](/hypha/tutorials/first-entity.md)
+- [Getting started](/hypha/tutorials/getting-started.md)
 
 ### How-to
 
@@ -32,5 +32,4 @@ Entities, ops, snapshots, and locks across your machines — the connective laye
 
 ### Other
 
-- [Getting started](/hypha/tutorials/getting-started.md)
 - [Untitled](/hypha/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md)

@@ -14,7 +14,7 @@ resolution happens a handful of times per run/verb, so a
 per-call process is cheap and needs no shared mutable state.</li>
 <li><code>serve</code> — a persistent <code>cuora serve</code> child speaking the
 ndjson JSON-RPC wire (<code>cuora-serve/1</code>) on stdio — see
-[<code>serve</code>]/<a href="struct.CuoraServe.html" title="struct hypha_secret_cuora::CuoraServe"><code>CuoraServe</code></a>. Spawned lazily on first use, reused
+<code>serve</code>/<a href="struct.CuoraServe.html" title="struct hypha_secret_cuora::CuoraServe"><code>CuoraServe</code></a>. Spawned lazily on first use, reused
 for the client’s lifetime, respawned on death. This is the
 transport <code>cuora serve</code> exists for (orchestrator embedding).</li>
 </ul>
@@ -45,7 +45,7 @@ are theirs); under <code>cli</code> sharing is a no-op behaviorally.</p>
 <code>cuora://&lt;scope&gt;/…</code> namespace) and the audit <code>actor</code> (defaults to
 the scope — every org consumer’s actor name equals its scope).</dd><dt><a class="struct" href="struct.CuoraServe.html" title="struct hypha_secret_cuora::CuoraServe">Cuora<wbr>Serve</a></dt><dd>Persistent <code>cuora serve</code> client. Spawn is lazy — construction is
 free; the child appears on the first request. Cloning shares the
-child via [<code>Arc</code>] at the <a href="struct.CuoraSecrets.html" title="struct hypha_secret_cuora::CuoraSecrets"><code>crate::CuoraSecrets</code></a> layer; <code>CuoraServe</code>
+child via <a href="https://doc.rust-lang.org/1.99.1/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc"><code>Arc</code></a> at the <a href="struct.CuoraSecrets.html" title="struct hypha_secret_cuora::CuoraSecrets"><code>crate::CuoraSecrets</code></a> layer; <code>CuoraServe</code>
 itself is not <code>Clone</code>.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.CuoraTransport.html" title="enum hypha_secret_cuora::CuoraTransport">Cuora<wbr>Transport</a></dt><dd>Which cuora transport <a href="struct.CuoraSecrets.html" title="struct hypha_secret_cuora::CuoraSecrets"><code>crate::CuoraSecrets</code></a> uses.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.rref.html" title="fn hypha_secret_cuora::rref">rref</a></dt><dd>Build the ref for a secret name under <code>scope</code>. A free fn so
 tests (and consumers with sub-namespaces like
 <code>peregrin/push</code>) pin the mapping without constructing a store.</dd></dl></section></div></main></body></html>

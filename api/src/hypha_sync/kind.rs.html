@@ -269,7 +269,7 @@
 <a href=#269 id=269 data-nosnippet>269</a>    /// override merged field-by-field over the generic rules. The
 <a href=#270 id=270 data-nosnippet>270</a>    /// generic rules unwrap the `{indexDoc}` interim wrap and read
 <a href=#271 id=271 data-nosnippet>271</a>    /// `updatedAt`/`locked`/`live` tolerantly (`live` also honors the
-<a href=#272 id=272 data-nosnippet>272</a>    /// legacy `busy` alias) — see [`crate::columns_of`].
+<a href=#272 id=272 data-nosnippet>272</a>    /// legacy `busy` alias) — see `crate::columns_of`.
 <a href=#273 id=273 data-nosnippet>273</a>    </span><span class="kw">pub fn </span>columns_of(<span class="kw-2">&amp;</span><span class="self">self</span>, raw: <span class="kw-2">&amp;</span>Value) -&gt; IndexedEntity {
 <a href=#274 id=274 data-nosnippet>274</a>        <span class="kw">let </span><span class="kw-2">mut </span>row = <span class="kw">crate</span>::columns_of(raw);
 <a href=#275 id=275 data-nosnippet>275</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(cols) = <span class="self">self</span>.for_entity_kind(<span class="kw-2">&amp;</span>row.kind).and_then(|p| p.columns(raw)) {

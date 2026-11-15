@@ -2,7 +2,7 @@
 <code>unauthorizedResponse</code> plus the login/logout cookie exchange and
 <code>POST /api/pair</code> code redemption. Substrate routes only: the
 per-session SSE <code>?access_token</code> path is the integration’s to add
-(see [<code>is_query_token_path</code>]).</p>
+(see <code>is_query_token_path</code>).</p>
 </div></details><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.AUTH_COOKIE.html" title="constant hypha_http::auth::AUTH_COOKIE">AUTH_<wbr>COOKIE</a></dt><dd>Cookie name — value is the credential itself (env token or paired).</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.accepts_credential.html" title="fn hypha_http::auth::accepts_credential">accepts_<wbr>credential</a></dt><dd>Whether the presented credential authenticates — env token or an
 issued pair credential (checked by hash: equivalent privilege, but
 revocable-by-file-deletion and never stored in plaintext).</dd><dt><a class="fn" href="fn.auth_gate.html" title="fn hypha_http::auth::auth_gate">auth_<wbr>gate</a></dt><dd>The bearer gate — middleware mounted over the whole app; pre-auth

@@ -12,13 +12,15 @@ Entities, ops, snapshots, and locks across your machines — the connective laye
 
 ### How-to
 
+- [Run a node and hub locally](/hypha/how-to/run-a-node.md)
 - [Build and test](/hypha/how-to/run-the-tests.md)
 - [Read the ledger](/hypha/how-to/read-the-ledger.md)
 
 ### Explanation
 
 - [Architecture](/hypha/explanation/architecture.md)
-- [Entities, ops, snapshots](/hypha/explanation/model.md)
+- [Concepts](/hypha/explanation/concepts.md)
+- [Decisions](/hypha/explanation/decisions.md)
 - [Boundary with sepia and peregrin](/hypha/explanation/boundary.md)
 
 ### Reference

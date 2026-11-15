@@ -72,9 +72,69 @@ See [reference/crates](../reference/crates.md) for the full surface.
 ---
 
 ---
+url: /hypha/how-to/run-a-node.md
+---
+# Run a node and hub locally
+
+**Goal:** stand up a bare hypha node plus its hub gateway and
+confirm the substrate answers.
+
+**Prerequisites:** `hypha` and `hypha-hub` installed
+(`cargo xtask install`, or `cargo install --path` per
+[Getting started](../getting-started.md)). Loopback binds may go
+tokenless — no secrets needed for this smoke run.
+
+## Steps
+
+1. Start the node host:
+
+   ```bash
+   hypha serve            # HYPHA_HOST/HYPHA_PORT, default 127.0.0.1:18787
+   ```
+
+2. In another shell, start the hub:
+
+   ```bash
+   hypha-hub              # HYPHA_HUB_HOST/HYPHA_HUB_PORT, default 127.0.0.1:13000
+   ```
+
+   The hub gateways the node at `HYPHA_NODE_URL`
+   (default `http://127.0.0.1:18787`).
+
+## Verify
+
+```bash
+curl localhost:18787/api/health        # {"ok":true}
+curl localhost:18787/api/node          # node descriptor
+curl localhost:18787/api/entities      # {"entities":[]} — no kinds yet
+curl localhost:13000/api/entity-index  # merged index (one row)
+curl localhost:13000/api/pending-ops   # outbox depth
+```
+
+A bare node mounts zero entity kinds — integrations register theirs
+at composition (see the [entity tutorial](../tutorials/first-entity.md)
+for the wire shapes, and [Environment](../reference/environment.md)
+for the full `HYPHA_*` surface).
+
+## Deeper
+
+* [Wire API](../reference/wire-api.md) — every route
+* [Architecture](../explanation/architecture.md) — planes, hub, outbox
+
+---
+
+---
 url: /hypha/how-to/run-the-tests.md
 ---
 # Build and test
+
+**Goal:** run the same gates CI runs before pushing.
+
+**Prerequisites:** a checkout of the repo, Rust toolchain per
+`rust-toolchain.toml`, `cargo-nextest` and `cargo-llvm-cov` for the
+full suite (both optional — fallbacks exist).
+
+## Steps
 
 ```bash
 cargo xtask check     # cargo fmt --check + clippy --workspace --all-targets -D warnings
@@ -84,12 +144,10 @@ cargo xtask fmt       # apply formatting
 ```
 
 The push gate (`scripts/ci.sh`, run by the peregrin ci-gate
-campaign on every push): runs lint, nextest
-
-* doctests, and a coverage check that
-  **gates on 100% line coverage** — any `DA:<line>,0` in the lcov report
-  fails the build. There is no GitHub Actions CI; run the same commands
-  locally before pushing.
+campaign on every push): runs lint, nextest + doctests, and a
+coverage check that **gates on 100% line coverage** — any
+`DA:<line>,0` in the lcov report fails the build. There is no
+GitHub Actions CI; run the same commands locally before pushing.
 
 Scope a single crate while iterating:
 
@@ -98,12 +156,32 @@ cargo nextest run -p hypha-outbox
 cargo clippy -p hypha-control --all-targets
 ```
 
+## Verify
+
+`cargo xtask check` exits 0 with no warnings; `cargo xtask test`
+reports all suites green; `cargo xtask coverage` emits the lcov
+report with no uncovered lines.
+
+## Deeper
+
+* [Architecture](../explanation/architecture.md) — which crate owns
+  what before you start editing
+
 ---
 
 ---
 url: /hypha/how-to/read-the-ledger.md
 ---
 # Read the ledger
+
+**Goal:** know what the org is doing in this repo before proposing
+or picking up work.
+
+**Prerequisites:** `myco` installed and the `project/` worktree
+present (it is — `docs/` and `project/` are git worktrees of
+orphan branches created by `myco init`).
+
+## Steps
 
 All project state lives in the `project/` worktree via
 [myco](https://github.com/9aia/myco) — tasks, backlog, issues,
@@ -121,6 +199,16 @@ ledger (`9aia/workspace → repos/project`): "hypha — entity substrate
 extraction from peregrin". Its handoffs carry the phase-by-phase
 execution log.
 
+## Verify
+
+`myco status --prompt` prints the current board; `myco resume
+PL-005` shows the plan's status and handoff chain.
+
+## Deeper
+
+* [Architecture](../explanation/architecture.md) — the planes the
+  ledger's plans are building toward
+
 ---
 
 ---
@@ -131,6 +219,16 @@ url: /hypha/explanation/architecture.md
 Hypha is the *substrate* layer: distributed primitives over generic
 entities. It owns who may act on an entity, when, and on which
 machine — plus the transport that gets ops and snapshots there.
+
+## Where it sits
+
+The org stack is **tamias → engines → orchestration → surfaces**.
+Hypha is a **substrate** — the connective layer between nodes and
+workloads, below the engines. Engines and integrations (sepia's
+session plane, peregrin's campaigns, future kinds) register
+their entity planes *on* hypha; orchestration (`peregrin`) sits on
+the substrate and never the reverse; surfaces (`pavo`, the `hypha`
+CLI) read the merged index and submit ops through the hub.
 
 ```
                  ┌─────────────── hypha-hub ───────────────┐
@@ -181,12 +279,13 @@ replayed oldest-first on reconnect. Reads merge through
 ---
 
 ---
-url: /hypha/explanation/model.md
+url: /hypha/explanation/concepts.md
 ---
-# Entities, ops, snapshots
+# Concepts
 
-The whole substrate is three primitives. Get these and the rest is
-plumbing.
+The whole substrate is three primitives — **entity**, **op**,
+**snapshot** — plus the planes and stores around them. Get these
+and the rest is plumbing.
 
 ## Entity
 
@@ -225,6 +324,113 @@ pairing — are orchestration-domain but workload-agnostic. Shaping
 them around sessions was the mistake ADR-0091 corrected; shaping
 them around *entities* is what lets CI jobs, sturn claims, or
 cicada schedules become kinds without touching this repo.
+
+## Around the primitives
+
+* **Node** — a `hypha serve` host owning a set of entity kinds via
+  its `KindRegistry`. The node is the unit of ownership: an
+  entity lives on exactly one node at a time.
+* **Hub** — `hypha-hub`, the aggregation gateway: merged entity
+  index, op routing with offline outbox, SSE diff tail, push.
+* **Owner** — the node an entity's ops route to; arbitration
+  (`hypha-control`) decides who may drive entity X on node Y.
+* **Outbox** — `hypha-outbox`, a durable per-entity FIFO SQLite
+  queue that replays oldest-first when a node reconnects.
+* **Projection** — `hypha-sync`'s SQLite entity-index + sync
+  engine on the hub side; reads merge through it.
+* **Kind / integration** — a workload registers `kind="<name>"`
+  entities by implementing the entity-plane contract in its own
+  repo (sepia's `sepia-peregrin`, peregrin's `campaign`). Hypha
+  never names the kind.
+* **KV** — node-local `{ns}/{key}` → JSON store (`hypha-kv` +
+  `-file`) with per-namespace visibility — the generalization of
+  peregrin's config/projects surface.
+
+---
+
+---
+url: /hypha/explanation/decisions.md
+---
+# Decisions
+
+ADR-lite — the decisions that shape hypha, the alternatives
+rejected, and the consequence each carries. Full history lives in
+the org ledger (`project/adrs/` — ADR-0091 is the entity-plane
+contract; PL-005 is the extraction plan).
+
+## Substrate over sessions (ADR-0091)
+
+**Decision:** the distributed layer is shaped around generic
+`Entity {id, kind, indexDoc, health}` values and namespaced ops —
+never around sessions or campaigns.
+
+**Alternatives:** keep the entity plane inside peregrin shaped
+around `sepia-session` (every new workload kind — CI jobs, sturn
+claims, cicada schedules — would fork the substrate); a
+workload-specific plane per integration (N sync/arbitration
+implementations to keep correct).
+
+**Consequence:** integrations plug in by implementing the entity
+contract in their own repo; the substrate stays kind-agnostic —
+no `sepia`/`campaign`/session types in these crates, enforced by
+review.
+
+## Snapshot bytes are opaque end-to-end
+
+**Decision:** `Snapshot {entity, ref, bytes}` — serialize on the
+owner, import on the target; hypha never parses the payload.
+
+**Alternatives:** a substrate-owned snapshot schema (every
+integration's state model becomes hypha's problem); references
+to external stores (transfer breaks when the store is unreachable
+or versioned differently).
+
+**Consequence:** migration semantics (`campaign-snapshot/v1`,
+sepia session IR) belong entirely to the integration — hypha
+guarantees transport, ordering, and arbitration, nothing more.
+
+## Ops are namespaced and TTL'd
+
+**Decision:** op `kind` is `<integration>.<verb>` with `entity.*`
+reserved for the substrate; outbox entries carry idempotency keys
+and TTLs, and `Turn`-class ops dead-letter on first failure.
+
+**Alternatives:** a flat global verb namespace (collisions across
+integrations); infinite retries (a poisoned op blocks its entity's
+FIFO forever).
+
+**Consequence:** the substrate can route and dedupe without
+understanding any verb; a failing op surfaces as dead-letter
+instead of silent backlog.
+
+## Policy is injected, not owned
+
+**Decision:** `hypha-control` is a pure arbitration library —
+lock registry, takeover, `pick_owner` — with no I/O; the hub
+boots an empty `KindPolicies` and integrations supply policy.
+
+**Alternatives:** policy baked into the hub (who-may-act rules
+become substrate concerns); policy in each node (split-brain
+arbitration).
+
+**Consequence:** arbitration is testable pure code; orchestration
+policy stays in peregrin where it belongs — the substrate decides
+*mechanism*, never *intent*.
+
+## Extracted from peregrin, composed upward
+
+**Decision:** hypha is the entity plane lifted out of peregrin
+(PL-005); `peregrin-node` becomes a thin composition root that
+registers entity planes on a hypha node host.
+
+**Alternatives:** keep the plane inside peregrin (the substrate
+could never serve non-orchestration workloads); a ground-up
+rewrite (the wire shapes and outbox semantics were already proven
+in production inside peregrin).
+
+**Consequence:** dependency direction is one-way —
+`peregrin → hypha → ports`. Orchestration sits *on* the substrate;
+the substrate never imports orchestration.
 
 ---
 
@@ -560,8 +766,12 @@ migration** — old entries are orphaned, not moved. After upgrading:
 
 * [Your first entity](tutorials/first-entity.md) — the entity model
   end to end, with wire shapes.
+* [Run a node and hub](how-to/run-a-node.md) — the two binaries up
+  and answering.
 * [Architecture](explanation/architecture.md) — planes, nodes, hub.
-* [Boundary](explanation/boundary.md) — what hypha owns vs sepia and
+* [Concepts](explanation/concepts.md) ·
+  [decisions](explanation/decisions.md) ·
+  [boundary](explanation/boundary.md) — what hypha owns vs sepia and
   peregrin.
 
 ---

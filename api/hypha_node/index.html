@@ -7,7 +7,7 @@ surface (<code>/api/health</code>, <code>/api/node</code>, <code>/api/events</co
 namespace) still works end-to-end. Integrations
 (peregrin’s session plane, campaign planes, …) compose
 <a href="fn.state.html" title="fn hypha_node::state"><code>state</code></a> themselves: build a <a href="../hypha_http/struct.HyphaState.html" title="struct hypha_http::HyphaState"><code>HyphaState</code></a>, register their
-[<code>EntityPlane</code>]s via <a href="../hypha_http/struct.HyphaState.html#method.with_kind" title="method hypha_http::HyphaState::with_kind"><code>HyphaState::with_kind</code></a>, and hand it to
+<a href="../hypha_http/entity_plane/trait.EntityPlane.html" title="trait hypha_http::entity_plane::EntityPlane"><code>EntityPlane</code></a>s via <a href="../hypha_http/struct.HyphaState.html#method.with_kind" title="method hypha_http::HyphaState::with_kind"><code>HyphaState::with_kind</code></a>, and hand it to
 <a href="fn.serve_state.html" title="fn hypha_node::serve_state"><code>serve_state</code></a>.</p>
 </div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.serve.html" title="fn hypha_node::serve">serve</a></dt><dd>Build state from env and serve until shutdown — the whole
 <code>hypha serve</code> boot path. Call on a tokio runtime; returns when the

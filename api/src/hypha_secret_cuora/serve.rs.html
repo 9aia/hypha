@@ -104,7 +104,7 @@
 <a href=#104 id=104 data-nosnippet>104</a>
 <a href=#105 id=105 data-nosnippet>105</a><span class="doccomment">/// Persistent `cuora serve` client. Spawn is lazy — construction is
 <a href=#106 id=106 data-nosnippet>106</a>/// free; the child appears on the first request. Cloning shares the
-<a href=#107 id=107 data-nosnippet>107</a>/// child via [`Arc`] at the [`crate::CuoraSecrets`] layer; `CuoraServe`
+<a href=#107 id=107 data-nosnippet>107</a>/// child via [`Arc`](std::sync::Arc) at the [`crate::CuoraSecrets`] layer; `CuoraServe`
 <a href=#108 id=108 data-nosnippet>108</a>/// itself is not `Clone`.
 <a href=#109 id=109 data-nosnippet>109</a></span><span class="kw">pub struct </span>CuoraServe {
 <a href=#110 id=110 data-nosnippet>110</a>    <span class="doccomment">/// The `cuora` binary — the consumer's `*_CUORA_BIN` override or
@@ -120,7 +120,7 @@
 <a href=#120 id=120 data-nosnippet>120</a>
 <a href=#121 id=121 data-nosnippet>121</a><span class="kw">impl </span>CuoraServe {
 <a href=#122 id=122 data-nosnippet>122</a>    <span class="doccomment">/// A client over `bin` attributing requests to `actor` with
-<a href=#123 id=123 data-nosnippet>123</a>    /// [`DEFAULT_TIMEOUT`].
+<a href=#123 id=123 data-nosnippet>123</a>    /// `DEFAULT_TIMEOUT`.
 <a href=#124 id=124 data-nosnippet>124</a>    </span><span class="attr">#[must_use]
 <a href=#125 id=125 data-nosnippet>125</a>    </span><span class="kw">pub fn </span>new(bin: PathBuf, actor: <span class="kw">impl </span>Into&lt;String&gt;) -&gt; <span class="self">Self </span>{
 <a href=#126 id=126 data-nosnippet>126</a>        <span class="self">Self </span>{
@@ -149,7 +149,7 @@
 <a href=#149 id=149 data-nosnippet>149</a>    ///
 <a href=#150 id=150 data-nosnippet>150</a>    /// Transient answers retry with the same bounded budget as the
 <a href=#151 id=151 data-nosnippet>151</a>    /// CLI leg (T-059): a dead child already retries inside
-<a href=#152 id=152 data-nosnippet>152</a>    /// [`Self::call`], but an `ok:false` `op_error`/`pdp_unreachable`
+<a href=#152 id=152 data-nosnippet>152</a>    /// `Self::call`, but an `ok:false` `op_error`/`pdp_unreachable`
 <a href=#153 id=153 data-nosnippet>153</a>    /// is a *cuora* answer — a vault transport flake wearing a
 <a href=#154 id=154 data-nosnippet>154</a>    /// well-formed reply — which used to collapse straight to
 <a href=#155 id=155 data-nosnippet>155</a>    /// `None`. Definitive codes (`not_found`, `denied`,

@@ -32,7 +32,8 @@ is peregrin's, distribution is tamias's.
 
 ## Which quadrant answers which goal
 
-- **Learn it** → [Tutorial: your first entity](tutorials/first-entity.md)
+- **Learn it** → [Getting started](tutorials/getting-started.md) —
+  build, install, smoke run, the entity model
 - **Do a task** → [How-to](/how-to/run-a-node) — run a node+hub,
   build and test, read the ledger
 - **Understand why** → [Architecture](/explanation/architecture),

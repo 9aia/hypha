@@ -13,7 +13,6 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "Getting Started", link: "/tutorials/getting-started" },
-      { text: "Tutorial", link: "/tutorials/first-entity" },
       { text: "How-to", link: "/how-to/run-the-tests" },
       { text: "Explanation", link: "/explanation/architecture" },
       { text: "Reference", link: "/reference/crates" },
@@ -29,7 +28,7 @@ export default defineConfig({
     sidebar: [
       {
         text: "Tutorials",
-        items: [{ text: "Your first entity", link: "/tutorials/first-entity" }],
+        items: [{ text: "Getting started", link: "/tutorials/getting-started" }],
       },
       {
         text: "How-to",

@@ -36,8 +36,9 @@ curl localhost:13000/api/pending-ops   # outbox depth
 ```
 
 A bare node mounts zero entity kinds — integrations register theirs
-at composition (see the [entity tutorial](../tutorials/first-entity.md)
-for the wire shapes, and [Environment](../reference/environment.md)
+at composition (see [Concepts](../explanation/concepts.md) for the
+entity model and [Wire API](../reference/wire-api.md) for the
+shapes, and [Environment](../reference/environment.md)
 for the full `HYPHA_*` surface).
 
 ## Deeper

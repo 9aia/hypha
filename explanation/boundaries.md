@@ -1,4 +1,4 @@
-# Boundary with sepia and peregrin
+# Boundaries
 
 Hypha sits between two neighbors and must stay generic against both.
 

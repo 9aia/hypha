@@ -5,7 +5,7 @@ confirm the substrate answers.
 
 **Prerequisites:** `hypha` and `hypha-hub` installed
 (`cargo xtask install`, or `cargo install --path` per
-[Getting started](../getting-started.md)). Loopback binds may go
+[Getting started](../tutorials/getting-started.md)). Loopback binds may go
 tokenless — no secrets needed for this smoke run.
 
 ## Steps

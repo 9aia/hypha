@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Get started
-      link: /getting-started
+      link: /tutorials/getting-started
     - theme: alt
       text: Architecture
       link: /explanation/architecture
@@ -38,7 +38,7 @@ is peregrin's, distribution is tamias's.
 - **Understand why** → [Architecture](/explanation/architecture),
   [concepts](/explanation/concepts),
   [decisions](/explanation/decisions),
-  [boundary](/explanation/boundary)
+  [boundary](/explanation/boundaries)
 - **Look something up** → [CLI](/reference/cli),
   [crates](/reference/crates),
   [environment](/reference/environment),

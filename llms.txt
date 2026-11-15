@@ -23,6 +23,7 @@ Entities, ops, snapshots, and locks across your machines — the connective laye
 
 ### Reference
 
+- [Command-Line Help for `hypha`](/hypha/reference/cli.md)
 - [Crates](/hypha/reference/crates.md)
 - [Environment](/hypha/reference/environment.md)
 - [Wire API](/hypha/reference/wire-api.md)

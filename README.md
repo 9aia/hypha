@@ -39,8 +39,10 @@ around the entity contract.
 ## Status
 
 Extracted from peregrin's entity plane (design contract:
-peregrin `project/adrs/0091`). Crates are landing phase by phase —
-see the org ledger plan for the migration state.
+peregrin `project/adrs/0091`). All crates have landed — `hypha`
+(node host) and `hypha-hub` (aggregation gateway) ship as
+binaries (`cargo xtask install`), and integrations consume the
+substrate as a git dep.
 
 ## Develop
 

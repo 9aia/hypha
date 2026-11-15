@@ -26,7 +26,8 @@ Ports-and-adapters. Crates are named `hypha-<port>` (trait) and
 | `crates/hypha-telemetry` | opt-in OTEL layer over `tracing` (OTLP export, W3C propagation) |
 | `crates/hypha-secret` + `-keyring`/`-dotenv`/`-cuora` | secrets port + OS-keyring, dotenv, and cuora (`cuora://<scope>/<NAME>`, CLI + `cuora serve` transports) impls |
 | `crates/hypha-service` + `-systemd` | service-install port + systemd impl |
-| `xtask` | check / test / coverage / fmt |
+| `crates/hypha-serve-cli` | one-shot argv→op-params shim for ndjson `*-serve` binaries — the generic CLI front door (P-020) |
+| `xtask` | check / test / coverage / fmt / install (release-builds `hypha` + `hypha-hub` → `~/.local/bin`) |
 
 Landed from peregrin's entity plane (PL-005); `hypha-http` carries
 the substrate half of `peregrin-http` (session routes stay in
@@ -57,6 +58,7 @@ cargo xtask check          # fmt + clippy -D warnings
 cargo xtask test           # whole suite (nextest if present)
 cargo xtask coverage       # llvm-cov report; extra args pass through
 cargo xtask fmt            # cargo fmt --all
+cargo xtask install        # release-build --bins, copy hypha + hypha-hub → ~/.local/bin
 ```
 
 Git hooks live in `.hooks/` (`core.hooksPath` = `.hooks`):

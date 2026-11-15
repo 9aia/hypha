@@ -4,6 +4,16 @@ Hypha is the *substrate* layer: distributed primitives over generic
 entities. It owns who may act on an entity, when, and on which
 machine — plus the transport that gets ops and snapshots there.
 
+## Where it sits
+
+The org stack is **tamias → engines → orchestration → surfaces**.
+Hypha is a **substrate** — the connective layer between nodes and
+workloads, below the engines. Engines and integrations (sepia's
+session plane, peregrin's campaigns, future kinds) register
+their entity planes *on* hypha; orchestration (`peregrin`) sits on
+the substrate and never the reverse; surfaces (`pavo`, the `hypha`
+CLI) read the merged index and submit ops through the hub.
+
 ```
                  ┌─────────────── hypha-hub ───────────────┐
                  │  merged index · op routing · push · SSE  │

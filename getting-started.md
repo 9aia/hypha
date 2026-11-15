@@ -68,6 +68,10 @@ migration** — old entries are orphaned, not moved. After upgrading:
 
 - [Your first entity](tutorials/first-entity.md) — the entity model
   end to end, with wire shapes.
+- [Run a node and hub](how-to/run-a-node.md) — the two binaries up
+  and answering.
 - [Architecture](explanation/architecture.md) — planes, nodes, hub.
-- [Boundary](explanation/boundary.md) — what hypha owns vs sepia and
+- [Concepts](explanation/concepts.md) ·
+  [decisions](explanation/decisions.md) ·
+  [boundary](explanation/boundary.md) — what hypha owns vs sepia and
   peregrin.

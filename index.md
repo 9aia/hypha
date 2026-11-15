@@ -23,3 +23,23 @@ features:
   - title: Hub
     details: Merged index across nodes, op routing with offline outbox, push, SSE bridges.
 ---
+
+hypha is the org's **distributed substrate** — entities, ops,
+snapshots, locks, and projections that let workloads span machines.
+It owns the connective layer between nodes and workloads and
+nothing else: session mechanism is sepia's, orchestration policy
+is peregrin's, distribution is tamias's.
+
+## Which quadrant answers which goal
+
+- **Learn it** → [Tutorial: your first entity](tutorials/first-entity.md)
+- **Do a task** → [How-to](/how-to/run-a-node) — run a node+hub,
+  build and test, read the ledger
+- **Understand why** → [Architecture](/explanation/architecture),
+  [concepts](/explanation/concepts),
+  [decisions](/explanation/decisions),
+  [boundary](/explanation/boundary)
+- **Look something up** → [CLI](/reference/cli),
+  [crates](/reference/crates),
+  [environment](/reference/environment),
+  [wire API](/reference/wire-api)

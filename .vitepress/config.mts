@@ -34,6 +34,7 @@ export default defineConfig({
       {
         text: "How-to",
         items: [
+          { text: "Run a node and hub", link: "/how-to/run-a-node" },
           { text: "Build and test", link: "/how-to/run-the-tests" },
           { text: "Read the ledger", link: "/how-to/read-the-ledger" },
         ],
@@ -42,7 +43,8 @@ export default defineConfig({
         text: "Explanation",
         items: [
           { text: "Architecture", link: "/explanation/architecture" },
-          { text: "Entities, ops, snapshots", link: "/explanation/model" },
+          { text: "Concepts", link: "/explanation/concepts" },
+          { text: "Decisions", link: "/explanation/decisions" },
           { text: "Boundary with sepia and peregrin", link: "/explanation/boundary" },
         ],
       },

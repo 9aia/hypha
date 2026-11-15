@@ -49,6 +49,7 @@ export default defineConfig({
       {
         text: "Reference",
         items: [
+          { text: "CLI", link: "/reference/cli" },
           { text: "Crates", link: "/reference/crates" },
           { text: "Environment", link: "/reference/environment" },
           { text: "Wire API", link: "/reference/wire-api" },

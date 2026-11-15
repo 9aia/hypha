@@ -4,23 +4,28 @@ Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
 `unwrap_used`/`expect_used` warn, `unsafe_code` forbid); edition
 2024, rust-version 1.85.
 
-| Crate | Role | Status |
-| --- | --- | --- |
-| `hypha-node-api` | `EntityApi` trait + wire DTOs + `HttpEntityApi`/`FakeEntityApi` | landed |
-| `hypha-outbox` | durable per-entity FIFO op queue (SQLite) | landed |
-| `hypha-control` | pure arbitration — locks, takeover, `pick_owner` | landed |
-| `hypha-telemetry` | opt-in OTEL over `tracing` | landed |
-| `hypha-secret` | secrets port (`get`/`set`, names not values) | landed |
-| `hypha-keyring` | OS-keyring impl (`secret-tool`) | landed |
-| `hypha-dotenv` | dotenv-file impl | landed |
-| `hypha-service` | service-install port | landed |
-| `hypha-systemd` | systemd unit render/install impl | landed |
-| `hypha-sync` | entity-index projection + sync engine (ex-`peregrin-sync`) | landed |
-| `hypha-push` | Web Push over a JSON doc store — VAPID, subscriptions, 404/410 prune (ex-`peregrin-push`) | landed |
-| `hypha-http` | substrate HTTP surface — `/api/entities*` kind planes, `/api/entity-index`/`/api/pending-ops`, `/api/events` feed, node/pairing/auth, `/api/push/*` (ex-`peregrin-http` split) | landed |
-| `hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi`, merged `/api/entities*`, SSE/passthrough proxies, push, node credentials; policy-injected `KindPolicies`; `hypha-hub` bin (`HYPHA_NODES` + `HYPHA_HUB_*` env) | landed |
-| `hypha-node` | node host library (`Env`→`HyphaState`→`hypha_http::app`, `with_kind` plane registration) + `hypha` bin (`hypha serve`, zero kinds) | landed |
-| `xtask` | `check` (fmt + clippy) / `test` / `coverage` / `fmt` | landed |
+<!-- crate-map -->
+| crate | layer | purpose |
+|---|---|---|
+| `hypha-control` | domain | Arbitration — lock registry, takeover policy, merge/route |
+| `hypha-kv` | port | Node-local key/value store port — namespaced JSON values with per-namespace visibility (P-006) |
+| `hypha-node-api` | port | Node API port + wire DTOs — the hub/client ↔ node contract. NodeApi trait, ureq client, FakeNodeApi stub, rewind selector, convert targets. No leptos, no DOM. |
+| `hypha-secret` | port | Secret-store port |
+| `hypha-service` | port | Service-install port |
+| `hypha-dotenv` | adapter | dotenv-file impl of the secret port |
+| `hypha-http` | adapter | Hypha HTTP substrate — axum adapter serving /api/entities*, /api/events, node/pairing/auth, and push over a HyphaState |
+| `hypha-keyring` | adapter | OS-keyring impl of the secret port |
+| `hypha-kv-file` | adapter | JSON-file impl of the hypha-kv store port — atomic tmp+rename writes (P-006) |
+| `hypha-secret-cuora` | adapter | Cuora `Secrets` impl — resolves `cuora://&lt;scope&gt;/&lt;NAME&gt;` through the cuora CLI or `cuora serve` |
+| `hypha-systemd` | adapter | systemd impl of the service port |
+| `hypha-telemetry` | adapter | Opt-in OpenTelemetry layer over the tracing stack — OTLP export, W3C context propagation |
+| `hypha-outbox` | service | Durable per-entity FIFO outbox for writes queued while a node is offline |
+| `hypha-push` | service | Web Push notifications over a JSON document store — VAPID keys persist in config; subscriptions prune on 404/410 |
+| `hypha-sync` | service | Hub-side sync layer — SQLite projection of paired nodes' entity indexes + outbox drain on reconnect |
+| `hypha-hub` | engine | Entity-API gateway — multi-node sync engine, HTTP/SSE bridges, push, auth |
+| `hypha-node` | engine | Node host — HyphaState composition + serve() for the substrate daemon |
+| `hypha-serve-cli` | engine | One-shot argv→op-params shim for ndjson *-serve binaries — the generic CLI front door (P-020). |
+| `xtask` | tooling | hypha-xtask — workspace automation. |
 
 Migration state lives in org-ledger plan **PL-005**; crate-level
 API docs build via `bun run docs:api` (cargo doc →

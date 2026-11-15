@@ -1,0 +1,37 @@
+# hypha — docs/reference generation contract for `cypera`
+# (`cypera gen crate-map|cli`, discovered upward from --repo).
+# Replaces the retired docs/gen-*.py wrappers; schema lives in
+# ../cypera crates/cypera-core/src/repo_config.rs.
+
+[crate_map]
+
+[crate_map.layers]
+"hypha-control" = "domain"
+"hypha-node-api" = "port"
+"hypha-secret" = "port"
+"hypha-service" = "port"
+"hypha-kv" = "port"
+"hypha-dotenv" = "adapter"
+"hypha-keyring" = "adapter"
+"hypha-secret-cuora" = "adapter"
+"hypha-kv-file" = "adapter"
+"hypha-systemd" = "adapter"
+"hypha-http" = "adapter"
+"hypha-telemetry" = "adapter"
+"hypha-outbox" = "service"
+"hypha-sync" = "service"
+"hypha-push" = "service"
+"hypha-node" = "engine"
+"hypha-hub" = "engine"
+"hypha-serve-cli" = "engine"
+"xtask" = "tooling"
+
+[[crate_map.splices]]
+target = "docs/reference/crates.md"
+marker = "<!-- crate-map -->"
+
+[cli]
+package = "hypha-node"
+bin = "hypha"
+prefix = []
+out = "docs/reference/cli.md"

@@ -35,3 +35,6 @@ package = "hypha-node"
 bin = "hypha"
 prefix = []
 out = "docs/reference/cli.md"
+
+[check]
+profile = "engine"

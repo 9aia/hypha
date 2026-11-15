@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["HttpEntityApi"],"trait":["EntityApi"]};
+window.SIDEBAR_ITEMS = {"enum":["OpResult"],"struct":["HttpEntityApi"],"trait":["EntityApi"]};

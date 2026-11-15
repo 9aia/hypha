@@ -115,15 +115,39 @@
 <a href=#115 id=115 data-nosnippet>115</a>            }
 <a href=#116 id=116 data-nosnippet>116</a>        }
 <a href=#117 id=117 data-nosnippet>117</a>        <span class="prelude-val">Some</span>(<span class="string">"fmt"</span>) =&gt; run(<span class="string">"cargo"</span>, <span class="kw-2">&amp;</span>[<span class="string">"fmt"</span>, <span class="string">"--all"</span>]),
-<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw">_ </span>=&gt; {
-<a href=#119 id=119 data-nosnippet>119</a>            <span class="macro">eprintln!</span>(<span class="string">"usage: cargo xtask &lt;check|test|coverage|fmt&gt;"</span>);
-<a href=#120 id=120 data-nosnippet>120</a>            <span class="kw">return </span>ExitCode::from(<span class="number">2</span>);
-<a href=#121 id=121 data-nosnippet>121</a>        }
-<a href=#122 id=122 data-nosnippet>122</a>    };
-<a href=#123 id=123 data-nosnippet>123</a>    <span class="kw">if </span>ok {
-<a href=#124 id=124 data-nosnippet>124</a>        ExitCode::SUCCESS
-<a href=#125 id=125 data-nosnippet>125</a>    } <span class="kw">else </span>{
-<a href=#126 id=126 data-nosnippet>126</a>        ExitCode::FAILURE
-<a href=#127 id=127 data-nosnippet>127</a>    }
-<a href=#128 id=128 data-nosnippet>128</a>}
+<a href=#118 id=118 data-nosnippet>118</a>        <span class="prelude-val">Some</span>(<span class="string">"install"</span>) =&gt; {
+<a href=#119 id=119 data-nosnippet>119</a>            <span class="kw">if </span>!run(<span class="string">"cargo"</span>, <span class="kw-2">&amp;</span>[<span class="string">"build"</span>, <span class="string">"--release"</span>, <span class="string">"--bins"</span>]) {
+<a href=#120 id=120 data-nosnippet>120</a>                <span class="kw">return </span>ExitCode::FAILURE;
+<a href=#121 id=121 data-nosnippet>121</a>            }
+<a href=#122 id=122 data-nosnippet>122</a>            <span class="kw">let </span>home = std::env::var_os(<span class="string">"HOME"</span>)
+<a href=#123 id=123 data-nosnippet>123</a>                .map_or_else(|| std::path::PathBuf::from(<span class="string">"/"</span>), std::path::PathBuf::from);
+<a href=#124 id=124 data-nosnippet>124</a>            <span class="kw">let </span>out = home.join(<span class="string">".local/bin"</span>);
+<a href=#125 id=125 data-nosnippet>125</a>            <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = std::fs::create_dir_all(<span class="kw-2">&amp;</span>out) {
+<a href=#126 id=126 data-nosnippet>126</a>                <span class="macro">eprintln!</span>(<span class="string">"xtask: cannot create {}: {e}"</span>, out.display());
+<a href=#127 id=127 data-nosnippet>127</a>                <span class="kw">return </span>ExitCode::FAILURE;
+<a href=#128 id=128 data-nosnippet>128</a>            }
+<a href=#129 id=129 data-nosnippet>129</a>            <span class="kw">let </span><span class="kw-2">mut </span>ok = <span class="bool-val">true</span>;
+<a href=#130 id=130 data-nosnippet>130</a>            <span class="kw">for </span>bin <span class="kw">in </span>[<span class="string">"hypha"</span>, <span class="string">"hypha-hub"</span>] {
+<a href=#131 id=131 data-nosnippet>131</a>                <span class="kw">let </span>src = <span class="macro">format!</span>(<span class="string">"target/release/{bin}"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>                <span class="kw">match </span>std::fs::copy(<span class="kw-2">&amp;</span>src, out.join(bin)) {
+<a href=#133 id=133 data-nosnippet>133</a>                    <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">println!</span>(<span class="string">"installed {bin} to {}"</span>, out.display()),
+<a href=#134 id=134 data-nosnippet>134</a>                    <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#135 id=135 data-nosnippet>135</a>                        <span class="macro">eprintln!</span>(<span class="string">"xtask: cannot install {bin}: {e}"</span>);
+<a href=#136 id=136 data-nosnippet>136</a>                        ok = <span class="bool-val">false</span>;
+<a href=#137 id=137 data-nosnippet>137</a>                    }
+<a href=#138 id=138 data-nosnippet>138</a>                }
+<a href=#139 id=139 data-nosnippet>139</a>            }
+<a href=#140 id=140 data-nosnippet>140</a>            ok
+<a href=#141 id=141 data-nosnippet>141</a>        }
+<a href=#142 id=142 data-nosnippet>142</a>        <span class="kw">_ </span>=&gt; {
+<a href=#143 id=143 data-nosnippet>143</a>            <span class="macro">eprintln!</span>(<span class="string">"usage: cargo xtask &lt;check|test|coverage|fmt|install&gt;"</span>);
+<a href=#144 id=144 data-nosnippet>144</a>            <span class="kw">return </span>ExitCode::from(<span class="number">2</span>);
+<a href=#145 id=145 data-nosnippet>145</a>        }
+<a href=#146 id=146 data-nosnippet>146</a>    };
+<a href=#147 id=147 data-nosnippet>147</a>    <span class="kw">if </span>ok {
+<a href=#148 id=148 data-nosnippet>148</a>        ExitCode::SUCCESS
+<a href=#149 id=149 data-nosnippet>149</a>    } <span class="kw">else </span>{
+<a href=#150 id=150 data-nosnippet>150</a>        ExitCode::FAILURE
+<a href=#151 id=151 data-nosnippet>151</a>    }
+<a href=#152 id=152 data-nosnippet>152</a>}
 </code></pre></div></section></main></body></html>

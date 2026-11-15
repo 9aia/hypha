@@ -8,20 +8,19 @@
 <a href=#8 id=8 data-nosnippet>8</a>//! entity reads, ungated ops, `entity.delete` — and every kind gets
 <a href=#9 id=9 data-nosnippet>9</a>//! the inert defaults. Integrations register their policies at
 <a href=#10 id=10 data-nosnippet>10</a>//! composition through [`crate::hub_state_with`] /
-<a href=#11 id=11 data-nosnippet>11</a>//! [`crate::hub_state_from_with`] (and the returned
-<a href=#12 id=12 data-nosnippet>12</a>//! [`crate::HubState::entity_router`] keeps working unchanged).
-<a href=#13 id=13 data-nosnippet>13</a>
-<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">use </span>hypha_sync::KindPolicies;
-<a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a><span class="doccomment">/// The registry a bare hub boots with — empty. `entity.*` substrate
-<a href=#17 id=17 data-nosnippet>17</a>/// behavior needs no policy: `entity.delete` is gated in
-<a href=#18 id=18 data-nosnippet>18</a>/// [`crate::sync_api::SyncEntityApi`] itself and unregistered kinds
-<a href=#19 id=19 data-nosnippet>19</a>/// get the generic fallbacks everywhere.
-<a href=#20 id=20 data-nosnippet>20</a>///
-<a href=#21 id=21 data-nosnippet>21</a>/// Integrations replace this with their own registry (e.g. a session
-<a href=#22 id=22 data-nosnippet>22</a>/// policy plus a campaign policy) — registration order decides the
-<a href=#23 id=23 data-nosnippet>23</a>/// default kind for kind-less creates.
-<a href=#24 id=24 data-nosnippet>24</a></span><span class="kw">pub fn </span>default_kind_policies() -&gt; KindPolicies {
-<a href=#25 id=25 data-nosnippet>25</a>    KindPolicies::new()
-<a href=#26 id=26 data-nosnippet>26</a>}
+<a href=#11 id=11 data-nosnippet>11</a>//! [`crate::hub_state_from_with`].
+<a href=#12 id=12 data-nosnippet>12</a>
+<a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">use </span>hypha_sync::KindPolicies;
+<a href=#14 id=14 data-nosnippet>14</a>
+<a href=#15 id=15 data-nosnippet>15</a><span class="doccomment">/// The registry a bare hub boots with — empty. `entity.*` substrate
+<a href=#16 id=16 data-nosnippet>16</a>/// behavior needs no policy: `entity.delete` is gated in
+<a href=#17 id=17 data-nosnippet>17</a>/// [`crate::sync_api::SyncEntityApi`] itself and unregistered kinds
+<a href=#18 id=18 data-nosnippet>18</a>/// get the generic fallbacks everywhere.
+<a href=#19 id=19 data-nosnippet>19</a>///
+<a href=#20 id=20 data-nosnippet>20</a>/// Integrations replace this with their own registry (e.g. a session
+<a href=#21 id=21 data-nosnippet>21</a>/// policy plus a campaign policy) — registration order decides the
+<a href=#22 id=22 data-nosnippet>22</a>/// default kind for kind-less creates.
+<a href=#23 id=23 data-nosnippet>23</a></span><span class="kw">pub fn </span>default_kind_policies() -&gt; KindPolicies {
+<a href=#24 id=24 data-nosnippet>24</a>    KindPolicies::new()
+<a href=#25 id=25 data-nosnippet>25</a>}
 </code></pre></div></section></main></body></html>

@@ -27,7 +27,7 @@ health probe, meta-backed config/projects) stay with the
 integration.</dd><dt><a class="mod" href="push/index.html" title="mod hypha_http::routes::push">push</a></dt><dd>Push subscription management — authenticated like every other
 <code>/api</code> route: an open subscribe endpoint would let anyone on the
 network register their own endpoint and receive notification
-payloads. Backed by [<code>hypha_push::PushStore</code>]; <code>None</code> on the state
+payloads. Backed by <a href="../../hypha_push/struct.PushStore.html" title="struct hypha_push::PushStore"><code>hypha_push::PushStore</code></a>; <code>None</code> on the state
 answers 501.</dd></dl><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.MAX_JSON_BODY.html" title="constant hypha_http::routes::MAX_JSON_BODY">MAX_<wbr>JSON_<wbr>BODY</a></dt><dd>Hard ceiling — <code>POST /api/entities/snapshot</code> carries a whole
 exported snapshot; nothing else legitimately approaches this.</dd><dt><a class="constant" href="constant.SMALL_JSON_BODY.html" title="constant hypha_http::routes::SMALL_JSON_BODY">SMALL_<wbr>JSON_<wbr>BODY</a></dt><dd>Small bodies — pair codes, login tokens, renames, op submissions,
 push subscriptions. The biggest legit field anywhere on these

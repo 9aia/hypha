@@ -40,11 +40,11 @@ Follow Diátaxis: `docs/tutorials/` (learn) · `docs/how-to/` (tasks) ·
 
 ## Releasing
 
-`scripts/release.sh` is run manually by an operator on `main`
-(releases are operator-run) — one workspace version bump
-(`cargo set-version --workspace`), a version sync in the tamias
-provider pack (`provider/hypha-substrate/tamias.yaml`), and a
-`hypha-v<ver>` tag. There is **no crates.io publish**: org policy
+Releases are run manually by an operator on `main` via
+`tarsi-serve release --dir . --yes` directly (the org release
+plane, project ADR-0005; repo config: `tarsi.toml` — the per-repo
+`scripts/release.sh` shims were removed org-wide): plan →
+changelog → bump → tag → push. There is **no crates.io publish**: org policy
 keeps every repo but tamias off crates.io (the `hypha`/`hypha-hub`
 names there are taken anyway), and the crates are internal
 lib-only engines. Distribution rides the tamias pack — after the

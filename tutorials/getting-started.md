@@ -23,11 +23,15 @@ Rust 1.98 (see `rust-toolchain.toml`), edition 2024.
 
 ## Install the binaries
 
-There is no `xtask install` — install straight from the workspace:
+```bash
+cargo xtask install   # release-builds → ~/.local/bin/{hypha,hypha-hub}
+```
+
+Or install straight from the workspace (into `~/.cargo/bin`):
 
 ```bash
-cargo install --path crates/hypha-node --locked   # → ~/.cargo/bin/hypha
-cargo install --path crates/hypha-hub --locked   # → ~/.cargo/bin/hypha-hub
+cargo install --path crates/hypha-node --locked
+cargo install --path crates/hypha-hub --locked
 ```
 
 ## Smoke run

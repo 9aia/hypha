@@ -5,8 +5,9 @@ url: /hypha/explanation/decisions.md
 
 ADR-lite — the decisions that shape hypha, the alternatives
 rejected, and the consequence each carries. Full history lives in
-the org ledger (`project/adrs/` — ADR-0091 is the entity-plane
-contract; PL-005 is the extraction plan).
+the ledgers: ADR-0001 in this repo's `project/adrs/` (the
+extraction), ADR-0091 in the peregrin ledger (the entity-plane
+contract), PL-005 in the org ledger (the extraction plan).
 
 ## Substrate over sessions (ADR-0091)
 

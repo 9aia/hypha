@@ -28,6 +28,8 @@ speak the same paths. (The P3-era alias spellings —
 | `/api/entities/snapshot` | POST | import snapshot (`body.kind` picks the plane) |
 | `/api/entity-index` | GET | `{"index": [{node, entities}]}` — one row, this node |
 | `/api/pending-ops` | GET | `{"ops": [...]}` — always empty on a bare node (the outbox is hub-side) |
+| `/api/kv` `/api/kv/{ns}` `/api/kv/{ns}/{key}` | GET (+ PUT/PATCH/DELETE on the key) | node-local KV — `{ns}/{key}` → JSON, per-namespace `public`/`internal` visibility (default `<home>/kv.json`) |
+| `/api/client/keypair` | POST | mint a stateless Ed25519 client keypair (node-side, for non-secure contexts) |
 | `/api/push/vapid` | GET | `{publicKey}` (501 without a push store) |
 | `/api/push/subscribe` | POST/DELETE | push subscription add/remove |
 

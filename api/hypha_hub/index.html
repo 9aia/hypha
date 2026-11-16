@@ -6,7 +6,7 @@ can’t carry cross-origin auth cleanly; proxying keeps the client
 same-origin).</li>
 <li><code>/api/entities/{id}/stream</code> — per-entity live stream, routed to
 the owning node and shaped by the kind’s
-<a href="../hypha_sync/kind/trait.KindPolicy.html#method.stream_path" title="method hypha_sync::kind::KindPolicy::stream_path"><code>hypha_sync::KindPolicy::stream_path</code></a>.</li>
+[<code>hypha_sync::KindPolicy::stream_path</code>].</li>
 <li><code>/api/push/*</code> — the hub-owned push subscription store (one
 subscription fans out to every paired node).</li>
 <li><code>/api/*</code> — generic passthrough for the rest of the node API,
@@ -18,7 +18,7 @@ lists read the merged projection and writes queue in the durable
 outbox when a node is down.</p>
 <p>The hub is <strong>policy-injected</strong>: <a href="kind_policies/fn.default_kind_policies.html" title="fn hypha_hub::kind_policies::default_kind_policies"><code>kind_policies::default_kind_policies</code></a>
 is an empty registry — integrations (peregrin’s session plane,
-campaign planes, …) supply their <a href="../hypha_sync/kind/struct.KindPolicies.html" title="struct hypha_sync::kind::KindPolicies"><code>hypha_sync::KindPolicies</code></a> via
+campaign planes, …) supply their [<code>hypha_sync::KindPolicies</code>] via
 <a href="fn.hub_state_with.html" title="fn hypha_hub::hub_state_with"><code>hub_state_with</code></a>/[<code>hub_state_from_with</code>]. A bare hub still
 gateways the whole substrate contract.</p>
 </div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="auth/index.html" title="mod hypha_hub::auth">auth</a></dt><dd>Client → hub auth — the hub’s own token surface. Node bearer tokens

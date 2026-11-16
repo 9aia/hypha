@@ -23,11 +23,15 @@ Rust 1.98 (see `rust-toolchain.toml`), edition 2024.
 
 ## Install the binaries
 
-There is no `xtask install` — install straight from the workspace:
+```bash
+cargo xtask install   # release-builds → ~/.local/bin/{hypha,hypha-hub}
+```
+
+Or install straight from the workspace (into `~/.cargo/bin`):
 
 ```bash
-cargo install --path crates/hypha-node --locked   # → ~/.cargo/bin/hypha
-cargo install --path crates/hypha-hub --locked   # → ~/.cargo/bin/hypha-hub
+cargo install --path crates/hypha-node --locked
+cargo install --path crates/hypha-hub --locked
 ```
 
 ## Smoke run
@@ -397,8 +401,9 @@ url: /hypha/explanation/decisions.md
 
 ADR-lite — the decisions that shape hypha, the alternatives
 rejected, and the consequence each carries. Full history lives in
-the org ledger (`project/adrs/` — ADR-0091 is the entity-plane
-contract; PL-005 is the extraction plan).
+the ledgers: ADR-0001 in this repo's `project/adrs/` (the
+extraction), ADR-0091 in the peregrin ledger (the entity-plane
+contract), PL-005 in the org ledger (the extraction plan).
 
 ## Substrate over sessions (ADR-0091)
 
@@ -632,6 +637,7 @@ Node host (`hypha serve`, `hypha-http::env::Env`):
 | `HYPHA_SSE_KEEPALIVE_MS` | `/api/events` keep-alive cadence (`0` disables) |
 | `HYPHA_PAIR_LIMIT_PER_MIN` / `HYPHA_PAIR_LIMIT_PER_DAY` | `/api/pair` throttle per client IP |
 | `HYPHA_PUSH` / `HYPHA_PUSH_PATH` | push config document (default `<home>/push.json`) |
+| `HYPHA_KV` / `HYPHA_KV_PATH` | node-local KV document for `/api/kv*` (default `<home>/kv.json`) |
 
 Hub (`hypha-hub`, `hypha_hub::HubConfig` + `hub_state_from_with`):
 
@@ -681,6 +687,8 @@ speak the same paths. (The P3-era alias spellings —
 | `/api/entities/snapshot` | POST | import snapshot (`body.kind` picks the plane) |
 | `/api/entity-index` | GET | `{"index": [{node, entities}]}` — one row, this node |
 | `/api/pending-ops` | GET | `{"ops": [...]}` — always empty on a bare node (the outbox is hub-side) |
+| `/api/kv` `/api/kv/{ns}` `/api/kv/{ns}/{key}` | GET (+ PUT/PATCH/DELETE on the key) | node-local KV — `{ns}/{key}` → JSON, per-namespace `public`/`internal` visibility (default `<home>/kv.json`) |
+| `/api/client/keypair` | POST | mint a stateless Ed25519 client keypair (node-side, for non-secure contexts) |
 | `/api/push/vapid` | GET | `{publicKey}` (501 without a push store) |
 | `/api/push/subscribe` | POST/DELETE | push subscription add/remove |
 

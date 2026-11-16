@@ -6,7 +6,7 @@ in the durable outbox when the node is down.</p>
 <p>Kind-specific behavior — op gating (<code>sepia.*</code> vs <code>*.meta*</code>),
 create validation (<code>"session"</code> alias), outbox op classification,
 external lock holders (<code>indexDoc.lockHolderPid</code>), and push rules —
-resolves through the <a href="../../hypha_sync/kind/struct.KindPolicies.html" title="struct hypha_sync::kind::KindPolicies"><code>KindPolicies</code></a> registry
+resolves through the [<code>KindPolicies</code>] registry
 (<a href="../kind_policies/index.html" title="mod hypha_hub::kind_policies"><code>crate::kind_policies</code></a>); this file names no kind itself. When
 the integration-backed <code>/api/entities</code> surface lands (PL-004
 phase 4), the registrations move with their integrations.</p>

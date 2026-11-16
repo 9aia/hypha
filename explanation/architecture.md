@@ -9,13 +9,15 @@ machine — plus the transport that gets ops and snapshots there.
 
 ## Where it sits
 
-The org stack is **tamias → engines → orchestration → surfaces**.
-Hypha is a **substrate** — the connective layer between nodes and
-workloads, below the engines. Engines and integrations (sepia's
-session plane, peregrin's campaigns, future kinds) register
-their entity planes *on* hypha; orchestration (`peregrin`) sits on
-the substrate and never the reverse; surfaces (`pavo`, the `hypha`
-CLI) read the merged index and submit ops through the hub.
+The org stack is **delivery → memory → process → interface**.
+Hypha is the **distributed substrate** — the connective layer
+between nodes and workloads, at the base of the delivery layer:
+the substrate that syncs entities across nodes. Integrations
+(sepia's session plane, peregrin's campaigns, future
+kinds) register their entity planes *on* hypha; the process layer
+(`peregrin`) orchestrates campaigns on this substrate and never the
+reverse; readers (`pavo`, the `hypha` CLI) read the merged index
+and submit ops through the hub.
 
 ```
                  ┌─────────────── hypha-hub ───────────────┐

@@ -11,6 +11,7 @@ export default defineConfig({
   base: "/hypha/",
   ignoreDeadLinks: [/\/api\//],
   themeConfig: {
+    search: { provider: "local" },
     nav: [
       { text: "9aia", link: "https://9aia.com", target: "_blank" },
       { text: "Getting Started", link: "/tutorials/getting-started" },

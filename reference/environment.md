@@ -24,6 +24,7 @@ Node host (`hypha serve`, `hypha-http::env::Env`):
 | `HYPHA_SSE_KEEPALIVE_MS` | `/api/events` keep-alive cadence (`0` disables) |
 | `HYPHA_PAIR_LIMIT_PER_MIN` / `HYPHA_PAIR_LIMIT_PER_DAY` | `/api/pair` throttle per client IP |
 | `HYPHA_PUSH` / `HYPHA_PUSH_PATH` | push config document (default `<home>/push.json`) |
+| `HYPHA_KV` / `HYPHA_KV_PATH` | node-local KV document for `/api/kv*` (default `<home>/kv.json`) |
 
 Hub (`hypha-hub`, `hypha_hub::HubConfig` + `hub_state_from_with`):
 

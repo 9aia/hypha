@@ -59,7 +59,7 @@ provenance:
   hashes:
   - 4e2e0616cf09a1048fddfc493d6b9d5907533de1
   - aad0bbc6f5706e61cb401495e1e107ef0d32212a
-  - 2512239197bf19a746efebfbab98edcad72bcfe0
-  commit_sha: 1e39f7f74490d9fb8f15db8841216dd3a7c00c46
-  generated_at: '1794608621'
+  - a075e161edbe8e277838c9c3b7278e680be22e62
+  commit_sha: 08ae38d655d956a43353bc405c285e33e39f5fff
+  generated_at: '1795021511'
   generator: kuda-template/0.1.4

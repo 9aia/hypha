@@ -9,6 +9,17 @@
 //! dead child, a closed stdout (EOF), a malformed reply line, or a
 //! request timeout drops the session and the next call respawns.
 //!
+//! Cold-start deaths get a wider retry budget than warm ones: at
+//! service boot a `cuora serve` child can race vault/keyring
+//! readiness or a SIGKILL'd predecessor's lock, and the millisecond
+//! flakes the per-request retry covers clear long before the child
+//! is spawnable. Until the first reply ever lands, `call` keeps
+//! respawning with backoff for [`CuoraServe::dead_budget`]; after
+//! that a crash-looping child is a broken `cuora` and gets the
+//! historical three fast attempts. A genuinely missing binary
+//! (`ENOENT` at spawn) never enters either budget — it fails fast
+//! on every call.
+//!
 //! Requests serialize on a mutex — the wire is one-request-at-a-time
 //! by design, and the timeout applies to the whole
 //! write+read roundtrip while the lock is held.
@@ -30,7 +41,7 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -45,6 +56,25 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 /// How long [`Drop`] waits for a clean `shutdown`-less exit (stdin
 /// EOF) before killing the child.
 const DROP_GRACE: Duration = Duration::from_millis(500);
+
+/// Cold-start dead-child budget — how long `call` keeps respawning
+/// while *no reply has ever landed* on this client. Boot-time
+/// readiness races (vault/keyring not up yet, a predecessor's lock
+/// still held) clear in seconds; the per-request backoff in
+/// [`crate::GET_RETRY_BACKOFF`] is sized for millisecond flakes and
+/// can't see them. Bounded — a `cuora` that never answers within
+/// the budget is broken, not warming up.
+const COLD_DEAD_BUDGET: Duration = Duration::from_secs(10);
+/// First cold-retry sleep — doubles each dead attempt up to
+/// [`COLD_DEAD_BACKOFF_MAX`]. Small enough that a child dying on
+/// the first write doesn't stall the common path.
+const COLD_DEAD_BACKOFF: Duration = Duration::from_millis(50);
+const COLD_DEAD_BACKOFF_MAX: Duration = Duration::from_secs(1);
+/// Warm-path dead attempts — once any reply has landed, a child
+/// that keeps dying is a broken `cuora`; the historical three fast
+/// respawns, no sleep (the caller's own retry — `get`'s
+/// [`crate::GET_ATTEMPTS`] — still applies on top).
+const WARM_DEAD_ATTEMPTS: u32 = 3;
 
 /// Which cuora transport [`crate::CuoraSecrets`] uses.
 ///
@@ -98,6 +128,11 @@ struct Session {
 enum Fail {
     /// Write/read/EOF/protocol desync — the session is dead.
     Dead,
+    /// Spawn failed `ENOENT` — the binary (or its interpreter) is
+    /// absent. Permanent for the process lifetime: no retry budget
+    /// applies, `call` fails fast so a missing `cuora` under the
+    /// serve transport misses as quickly as under the CLI.
+    NoBinary,
     /// The deadline passed — session dropped, caller sees the error.
     Timeout,
 }
@@ -114,6 +149,12 @@ pub struct CuoraServe {
     /// `actor` field (a claimed label, like every local actor claim).
     actor: String,
     timeout: Duration,
+    /// Cold-start dead-child budget — see [`COLD_DEAD_BUDGET`].
+    dead_budget: Duration,
+    /// Set on the first reply of any kind (`ok` or `ok:false` —
+    /// either proves the wire works). Gates the cold/warm dead
+    /// retry regimes in [`Self::call`].
+    ever_connected: AtomicBool,
     next_id: AtomicU64,
     session: Mutex<Option<Session>>,
 }
@@ -127,6 +168,8 @@ impl CuoraServe {
             bin,
             actor: actor.into(),
             timeout: DEFAULT_TIMEOUT,
+            dead_budget: COLD_DEAD_BUDGET,
+            ever_connected: AtomicBool::new(false),
             next_id: AtomicU64::new(1),
             session: Mutex::new(None),
         }
@@ -136,6 +179,15 @@ impl CuoraServe {
     #[must_use]
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
+        self
+    }
+
+    /// Override the cold-start dead-child budget (tests use tiny
+    /// values — the default is sized for real boot-time readiness
+    /// races, which no test wants to wait out).
+    #[must_use]
+    pub fn with_dead_budget(mut self, dead_budget: Duration) -> Self {
+        self.dead_budget = dead_budget;
         self
     }
 
@@ -216,27 +268,63 @@ impl CuoraServe {
         }
     }
 
-    /// One request → one reply. Transport failures retry **once** on
-    /// a freshly spawned child (a request that never got answered is
+    /// One request → one reply. Transport failures retry on a
+    /// freshly spawned child (a request that never got answered is
     /// safe to replay — `get` is idempotent and `put`/`rotate`
     /// re-putting the same value is a no-op semantically); a parsed
     /// reply — `ok` or `ok:false` — returns as-is.
+    ///
+    /// Dead-child retries come in two regimes (see the module docs):
+    /// *cold* — no reply has ever landed on this client, so the
+    /// spawn/readiness race gets [`Self::dead_budget`] of respawns
+    /// with backoff; *warm* — a session proved itself once, so a
+    /// crash-looping child is a broken `cuora` and gets
+    /// [`WARM_DEAD_ATTEMPTS`] fast attempts. `Fail::NoBinary` is
+    /// neither — `ENOENT` at spawn is permanent and fails fast.
     fn call(&self, request: &Value) -> Result<Value, String> {
         let mut req = request.clone();
         // `id` is echoed verbatim for correlation; absent → null is
         // legal, but a real id makes a desynced wire diagnosable.
         req["id"] = json!(self.next_id.fetch_add(1, Ordering::Relaxed));
         let line = serde_json::to_string(&req).map_err(|e| e.to_string())?;
-        // Three attempts covers detect-dead → respawn-dies-mid-
-        // request → respawn-healthy; a request that keeps killing
-        // children is a broken `cuora`, not a transient.
-        let mut last_err = String::new();
-        for _ in 0..3 {
+        // The cold deadline is fixed at call entry; `ever_connected`
+        // flipping mid-call (a concurrent request landed a reply)
+        // demotes this call to the warm regime on the next dead
+        // attempt — readiness is a property of the transport, not
+        // the request.
+        let cold_deadline = (!self.ever_connected.load(Ordering::Relaxed))
+            .then(|| Instant::now() + self.dead_budget);
+        let mut backoff = COLD_DEAD_BACKOFF;
+        let mut dead_attempts = 0u32;
+        loop {
             match self.roundtrip(&line) {
-                Ok(reply) => return Ok(reply),
+                Ok(reply) => {
+                    self.ever_connected.store(true, Ordering::Relaxed);
+                    return Ok(reply);
+                }
+                Err(Fail::NoBinary) => {
+                    return Err("cuora serve binary unavailable".to_string());
+                }
                 Err(Fail::Dead) => {
                     self.drop_session();
-                    last_err = "cuora serve child died".to_string();
+                    dead_attempts += 1;
+                    let cold =
+                        cold_deadline.filter(|_| !self.ever_connected.load(Ordering::Relaxed));
+                    match cold {
+                        Some(deadline) => {
+                            let now = Instant::now();
+                            if now >= deadline {
+                                break;
+                            }
+                            thread::sleep(backoff.min(deadline - now));
+                            backoff = (backoff * 2).min(COLD_DEAD_BACKOFF_MAX);
+                        }
+                        None => {
+                            if dead_attempts >= WARM_DEAD_ATTEMPTS {
+                                break;
+                            }
+                        }
+                    }
                 }
                 Err(Fail::Timeout) => {
                     self.drop_session();
@@ -248,7 +336,9 @@ impl CuoraServe {
                 }
             }
         }
-        Err(last_err)
+        // The only `break` is the dead-child budget — every other
+        // outcome returned above.
+        Err("cuora serve child died".to_string())
     }
 
     /// Write `line` + `\n`, flush, read one reply line, parse it.
@@ -259,7 +349,18 @@ impl CuoraServe {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         if guard.is_none() {
-            *guard = Some(self.spawn().map_err(|_| Fail::Dead)?);
+            match self.spawn() {
+                Ok(session) => *guard = Some(session),
+                // `ENOENT` — binary or interpreter absent. Permanent:
+                // surface it so `call` fails fast instead of burning
+                // the cold budget on a spawn that can never succeed.
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    return Err(Fail::NoBinary);
+                }
+                // Any other spawn/io failure (fork pressure, EAGAIN)
+                // is transient-shaped — the dead-child retry path.
+                Err(_) => return Err(Fail::Dead),
+            }
         }
         let Some(session) = guard.as_mut() else {
             return Err(Fail::Dead);
@@ -397,6 +498,7 @@ impl fmt::Debug for CuoraServe {
             .field("bin", &self.bin)
             .field("actor", &self.actor)
             .field("timeout", &self.timeout)
+            .field("dead_budget", &self.dead_budget)
             .finish_non_exhaustive()
     }
 }
@@ -451,13 +553,22 @@ mod tests {
     /// trigger. `$DIR/operr-<key>` makes the next `get` for that
     /// key answer a transient `op_error` once (consumed);
     /// `$DIR/operr-always` makes every `get` answer it — the
-    /// T-059 retry-budget fixtures.
+    /// T-059 retry-budget fixtures. `$DIR/flaky` holds a count N:
+    /// the next N spawns exit 1 immediately without reading —
+    /// the cold-start readiness-race fixture.
     fn stub(dir: &std::path::Path, extra: &str) -> PathBuf {
         let script = format!(
             "#!/bin/sh\n\
              dir='{dir}'\n\
              echo x >> \"$dir/spawns\"\n\
              {extra}\n\
+             if [ -f \"$dir/flaky\" ]; then\n\
+               n=$(cat \"$dir/flaky\")\n\
+               if [ \"$n\" -gt 0 ]; then\n\
+                 echo $((n - 1)) > \"$dir/flaky\"\n\
+                 exit 1\n\
+               fi\n\
+             fi\n\
              if [ -f \"$dir/die-once\" ]; then\n\
                rm \"$dir/die-once\"\n\
                IFS= read -r _line\n\
@@ -609,6 +720,68 @@ mod tests {
         std::fs::write(dir.path().join("operr-always"), "").unwrap();
         let serve = CuoraServe::new(bin, "test-actor");
         assert_eq!(serve.get("cuora://test/X"), None);
+    }
+
+    #[test]
+    fn get_retries_cold_start_deaths_until_the_child_is_ready() {
+        // The boot race: the first spawns die before answering —
+        // vault/keyring not up yet, a SIGKILL'd predecessor's lock
+        // still held. Until the first reply lands the client keeps
+        // respawning with backoff, so a readiness window measured
+        // in seconds doesn't collapse to a permanent miss.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = stub(dir.path(), "");
+        std::fs::write(dir.path().join("db-T"), "sekret").unwrap();
+        std::fs::write(dir.path().join("flaky"), "3").unwrap();
+        let serve = CuoraServe::new(bin, "test-actor").with_dead_budget(Duration::from_secs(5));
+        assert_eq!(serve.get("cuora://test/T").as_deref(), Some("sekret"));
+        assert_eq!(spawns(dir.path()), 4, "3 dead spawns + 1 serving");
+    }
+
+    #[test]
+    fn warm_deaths_keep_the_fast_budget() {
+        // Once a reply has landed the transport is proven — a
+        // crash-looping child is a broken `cuora`, so dead retries
+        // go back to the historical three fast attempts per call
+        // (`get`'s own GET_ATTEMPTS on top), not the cold budget.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = stub(dir.path(), "");
+        std::fs::write(dir.path().join("db-A"), "one").unwrap();
+        // A generous budget proves the warm path ignores it.
+        let serve = CuoraServe::new(bin, "test-actor").with_dead_budget(Duration::from_secs(30));
+        assert_eq!(serve.get("cuora://test/A").as_deref(), Some("one"));
+        assert_eq!(spawns(dir.path()), 1);
+        // `die-after` retires the live session (it answers once
+        // more, then exits); `flaky` then kills every respawn —
+        // warm regime: each `call` gets WARM_DEAD_ATTEMPTS
+        // roundtrips, `get` retries GET_ATTEMPTS calls.
+        std::fs::write(dir.path().join("die-after"), "").unwrap();
+        std::fs::write(dir.path().join("flaky"), "100").unwrap();
+        assert_eq!(serve.get("cuora://test/A").as_deref(), Some("one"));
+        assert_eq!(serve.get("cuora://test/A"), None);
+        // 1 serving spawn + the warm retries: the first `call`'s
+        // opening roundtrip dies on the *stale* session (no spawn),
+        // leaving WARM_DEAD_ATTEMPTS-1 respawns; each later `get`
+        // attempt spawns WARM_DEAD_ATTEMPTS children.
+        assert_eq!(
+            spawns(dir.path()),
+            1 + (WARM_DEAD_ATTEMPTS - 1) as usize
+                + WARM_DEAD_ATTEMPTS as usize * (crate::GET_ATTEMPTS - 1) as usize,
+            "warm calls give up after WARM_DEAD_ATTEMPTS each"
+        );
+    }
+
+    #[test]
+    fn not_found_never_enters_the_dead_budget() {
+        // A well-formed `not_found` is a cuora answer, not a
+        // transport failure — it misses on the first reply with no
+        // respawn, so fallthrough chains don't pay for it.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = stub(dir.path(), "");
+        let serve = CuoraServe::new(bin, "test-actor");
+        assert_eq!(serve.get("cuora://test/MISSING"), None);
+        assert_eq!(serve.get("cuora://test/MISSING"), None);
+        assert_eq!(spawns(dir.path()), 1, "one child serves every miss");
     }
 
     #[test]

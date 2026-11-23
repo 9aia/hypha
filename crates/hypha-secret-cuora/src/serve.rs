@@ -38,7 +38,7 @@
 
 use std::fmt;
 use std::io::{self, BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -75,6 +75,16 @@ const COLD_DEAD_BACKOFF_MAX: Duration = Duration::from_secs(1);
 /// respawns, no sleep (the caller's own retry — `get`'s
 /// [`crate::GET_ATTEMPTS`] — still applies on top).
 const WARM_DEAD_ATTEMPTS: u32 = 3;
+
+/// Default max session age — a `cuora serve` child caches spawn-time
+/// state (binary image, vault/keyring resolution). Observed
+/// 2026-11-19: children spawned before a `cuora` upgrade kept
+/// serving misses for ~2 days until the service restarted. The
+/// mtime check catches binary replacements; this bounds every other
+/// drift (locked keyring windows, env-side changes) — respawning is
+/// one fork, so a short bound costs nothing. Override with
+/// [`CuoraServe::with_max_age`].
+const DEFAULT_MAX_AGE: Duration = Duration::from_secs(900);
 
 /// Which cuora transport [`crate::CuoraSecrets`] uses.
 ///
@@ -120,6 +130,12 @@ struct Session {
     /// Reply lines from the stdout reader thread — `Err` carries the
     /// reader's io failure; channel close means stdout hit EOF.
     lines: Receiver<io::Result<String>>,
+    /// When the session spawned — feeds [`MAX_SESSION_AGE`].
+    spawned_at: Instant,
+    /// The resolved binary's mtime at spawn — a later mtime means
+    /// the on-disk `cuora` was replaced (upgrade/reinstall) and this
+    /// child still runs the old image.
+    bin_mtime: Option<std::time::SystemTime>,
 }
 
 /// Why a roundtrip failed at the transport layer (as opposed to a
@@ -151,6 +167,8 @@ pub struct CuoraServe {
     timeout: Duration,
     /// Cold-start dead-child budget — see [`COLD_DEAD_BUDGET`].
     dead_budget: Duration,
+    /// Session recycle age — see [`DEFAULT_MAX_AGE`].
+    max_age: Duration,
     /// Set on the first reply of any kind (`ok` or `ok:false` —
     /// either proves the wire works). Gates the cold/warm dead
     /// retry regimes in [`Self::call`].
@@ -169,6 +187,7 @@ impl CuoraServe {
             actor: actor.into(),
             timeout: DEFAULT_TIMEOUT,
             dead_budget: COLD_DEAD_BUDGET,
+            max_age: DEFAULT_MAX_AGE,
             ever_connected: AtomicBool::new(false),
             next_id: AtomicU64::new(1),
             session: Mutex::new(None),
@@ -188,6 +207,13 @@ impl CuoraServe {
     #[must_use]
     pub fn with_dead_budget(mut self, dead_budget: Duration) -> Self {
         self.dead_budget = dead_budget;
+        self
+    }
+
+    /// Override the session recycle age (tests use tiny values).
+    #[must_use]
+    pub fn with_max_age(mut self, max_age: Duration) -> Self {
+        self.max_age = max_age;
         self
     }
 
@@ -303,6 +329,7 @@ impl CuoraServe {
                     return Ok(reply);
                 }
                 Err(Fail::NoBinary) => {
+                    eprintln!("hypha-secret-cuora: cuora serve binary unavailable");
                     return Err("cuora serve binary unavailable".to_string());
                 }
                 Err(Fail::Dead) => {
@@ -328,6 +355,11 @@ impl CuoraServe {
                 }
                 Err(Fail::Timeout) => {
                     self.drop_session();
+                    eprintln!(
+                        "hypha-secret-cuora: cuora serve {} timed out after {:?}",
+                        request.get("op").and_then(Value::as_str).unwrap_or("?"),
+                        self.timeout
+                    );
                     return Err(format!(
                         "cuora serve {} timed out after {:?}",
                         request.get("op").and_then(Value::as_str).unwrap_or("?"),
@@ -338,6 +370,7 @@ impl CuoraServe {
         }
         // The only `break` is the dead-child budget — every other
         // outcome returned above.
+        eprintln!("hypha-secret-cuora: cuora serve child died");
         Err("cuora serve child died".to_string())
     }
 
@@ -348,6 +381,15 @@ impl CuoraServe {
             .session
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // A live-but-stale child is worse than a dead one: it answers
+        // well-formed misses forever. Recycle on binary replacement
+        // or max age before writing the request.
+        if let Some(reason) = guard.as_ref().and_then(|s| self.stale_reason(s)) {
+            if let Some(mut session) = guard.take() {
+                reap(&mut session.child);
+            }
+            eprintln!("hypha-secret-cuora: recycling stale cuora serve session ({reason})");
+        }
         if guard.is_none() {
             match self.spawn() {
                 Ok(session) => *guard = Some(session),
@@ -366,6 +408,23 @@ impl CuoraServe {
             return Err(Fail::Dead);
         };
         session.exchange(line, self.timeout)
+    }
+
+    /// Why a live session should be recycled, if it should —
+    /// `Some(reason)` drops it. Binary mtime is compared against the
+    /// spawn-time snapshot; an unresolvable binary skips the check
+    /// (PATH-less names still spawn fine via execvp).
+    fn stale_reason(&self, session: &Session) -> Option<&'static str> {
+        if session.spawned_at.elapsed() >= self.max_age {
+            return Some("max session age");
+        }
+        let current = resolve_bin(&self.bin)
+            .and_then(|p| std::fs::metadata(p).ok())
+            .and_then(|m| m.modified().ok());
+        match (session.bin_mtime, current) {
+            (Some(spawned), Some(now)) if now > spawned => Some("binary replaced"),
+            _ => None,
+        }
     }
 
     /// Spawn `cuora serve` — stdin/stdout piped, stderr discarded
@@ -414,6 +473,10 @@ impl CuoraServe {
             child,
             stdin,
             lines,
+            spawned_at: Instant::now(),
+            bin_mtime: resolve_bin(&self.bin)
+                .and_then(|p| std::fs::metadata(p).ok())
+                .and_then(|m| m.modified().ok()),
         })
     }
 
@@ -457,6 +520,25 @@ impl Session {
             Err(RecvTimeoutError::Timeout) => Err(Fail::Timeout),
         }
     }
+}
+
+/// Resolve `bin` to a concrete path for mtime checks — PATH
+/// lookup for bare names (mirroring execvp), the path itself
+/// otherwise. `None` when nothing resolves; callers treat that as
+/// "can't check", never as an error.
+fn resolve_bin(bin: &Path) -> Option<PathBuf> {
+    use std::os::unix::fs::PermissionsExt;
+    if bin.components().count() > 1 {
+        return Some(bin.to_path_buf());
+    }
+    std::env::var_os("PATH").and_then(|paths| {
+        std::env::split_paths(&paths)
+            .map(|dir| dir.join(bin))
+            .find(|p| {
+                std::fs::metadata(p)
+                    .is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+            })
+    })
 }
 
 /// Close stdin (EOF → cuora exits cleanly), wait up to [`DROP_GRACE`],
@@ -782,6 +864,58 @@ mod tests {
         assert_eq!(serve.get("cuora://test/MISSING"), None);
         assert_eq!(serve.get("cuora://test/MISSING"), None);
         assert_eq!(spawns(dir.path()), 1, "one child serves every miss");
+    }
+
+    #[test]
+    fn recycles_the_session_when_the_binary_is_replaced() {
+        // The 2026-11-19 incident: a `cuora` upgrade left long-lived
+        // serve children running the old image, serving misses for
+        // days. Rewriting the stub bumps its mtime — the next call
+        // must reap the stale child and respawn.
+        let dir = tempfile::tempdir().unwrap();
+        let bin = stub(dir.path(), "");
+        let serve = CuoraServe::new(bin.clone(), "test-actor");
+        serve.put("cuora://test/A", "one").unwrap();
+        assert_eq!(spawns(dir.path()), 1);
+        // Same file, newer mtime — as a package upgrade leaves it.
+        // The replacement still counts spawns, then exits without
+        // serving: the respawn is observable, the call fails
+        // transport-side rather than reusing the stale session.
+        std::fs::write(
+            &bin,
+            format!(
+                "#!/bin/sh\necho x >> '{}'\nexit 0\n",
+                dir.path().join("spawns").display()
+            ),
+        )
+        .unwrap();
+        let f = std::fs::OpenOptions::new().write(true).open(&bin).unwrap();
+        f.set_modified(std::time::SystemTime::now() + Duration::from_secs(1))
+            .unwrap();
+        drop(f);
+        // The stub is now `exit 0` with no serve loop — but the
+        // point is the respawn happened: the call fails transport-
+        // side rather than reusing the stale session.
+        assert_eq!(serve.get("cuora://test/A"), None);
+        assert!(spawns(dir.path()) >= 2, "stale child was recycled");
+    }
+
+    #[test]
+    fn recycles_the_session_after_max_age() {
+        // Binary untouched — the age bound is the backstop for
+        // drift the mtime check can't see (locked keyring windows,
+        // env-side changes).
+        let dir = tempfile::tempdir().unwrap();
+        let bin = stub(dir.path(), "");
+        let serve = CuoraServe::new(bin, "test-actor").with_max_age(Duration::from_millis(50));
+        serve.put("cuora://test/A", "one").unwrap();
+        assert_eq!(spawns(dir.path()), 1);
+        thread::sleep(Duration::from_millis(80));
+        assert_eq!(serve.get("cuora://test/A").as_deref(), Some("one"));
+        assert_eq!(spawns(dir.path()), 2, "aged-out child was recycled");
+        // Within the new session's window — reused again.
+        assert_eq!(serve.get("cuora://test/A").as_deref(), Some("one"));
+        assert_eq!(spawns(dir.path()), 2);
     }
 
     #[test]

@@ -14,7 +14,7 @@ contact us first and we will coordinate disclosure privately.
 - Node↔hub auth is token/pairing based; ops are namespaced and
   validated only for shape — authorization policy lives in
   `hypha-control` and the integration, not the wire.
-- Secrets resolve via `hypha-secret` ports (env → OS keyring →
+- Secrets resolve via the org `cuora-secret` port (env → cuora vaults → OS keyring →
   dotenv file); values never appear in config or index docs.
 
 We respond to reports as quickly as we can; expect acknowledgement

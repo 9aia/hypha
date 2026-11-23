@@ -17,7 +17,6 @@
 "hypha-kv-file" = "adapter"
 "hypha-systemd" = "adapter"
 "hypha-http" = "adapter"
-"hypha-telemetry" = "adapter"
 "hypha-outbox" = "service"
 "hypha-sync" = "service"
 "hypha-push" = "service"

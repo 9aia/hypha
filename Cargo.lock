@@ -1606,7 +1606,7 @@ dependencies = [
  "hypha-kv",
  "hypha-kv-file",
  "hypha-push",
- "hypha-telemetry",
+ "lampy-telemetry-otel",
  "nix",
  "serde",
  "serde_json",
@@ -1634,8 +1634,9 @@ dependencies = [
  "hypha-outbox",
  "hypha-push",
  "hypha-sync",
- "hypha-telemetry",
  "keyring",
+ "lampy-telemetry",
+ "lampy-telemetry-otel",
  "serde",
  "serde_json",
  "sha2",
@@ -1681,7 +1682,8 @@ dependencies = [
  "axum",
  "clap",
  "hypha-http",
- "hypha-telemetry",
+ "lampy-telemetry",
+ "lampy-telemetry-otel",
  "tokio",
  "tracing",
 ]
@@ -1774,19 +1776,6 @@ version = "0.1.0"
 dependencies = [
  "hypha-service",
  "tempfile",
-]
-
-[[package]]
-name = "hypha-telemetry"
-version = "0.1.0"
-dependencies = [
- "http 1.5.0",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -2074,6 +2063,29 @@ dependencies = [
  "security-framework 3.7.0",
  "windows-sys 0.60.2",
  "zeroize",
+]
+
+[[package]]
+name = "lampy-telemetry"
+version = "0.1.0"
+source = "git+ssh://git@github.com/9aia/lampy.git?rev=04c89924413c5e169e5b6c48d7e5897be53be85c#04c89924413c5e169e5b6c48d7e5897be53be85c"
+dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "lampy-telemetry-otel"
+version = "0.1.0"
+source = "git+ssh://git@github.com/9aia/lampy.git?rev=04c89924413c5e169e5b6c48d7e5897be53be85c#04c89924413c5e169e5b6c48d7e5897be53be85c"
+dependencies = [
+ "http 1.5.0",
+ "lampy-telemetry",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3755,16 +3767,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-serde"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
-dependencies = [
- "serde",
- "tracing-core",
-]
-
-[[package]]
 name = "tracing-subscriber"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3774,15 +3776,12 @@ dependencies = [
  "nu-ansi-term",
  "once_cell",
  "regex-automata",
- "serde",
- "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
- "tracing-serde",
 ]
 
 [[package]]

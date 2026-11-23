@@ -23,10 +23,10 @@ Ports-and-adapters. Crates are named `hypha-<port>` (trait) and
 | `crates/hypha-node` | node host library — `Env` → `HyphaState` → `hypha_http::app`; integrations register planes via `HyphaState::with_kind`, then `serve_state`. Ships the `hypha` bin (`hypha serve`, zero kinds) |
 | `crates/hypha-hub` | aggregation gateway (ex-`peregrin-hub`) — `SyncEntityApi` over the sync engine, merged `/api/entities*` surface, SSE/passthrough proxies, push store, node credentials (keyring→file). Policy-injected: boots an empty `KindPolicies`, integrations supply theirs via `hub_state_with`/`hub_state_from_with`. Ships the `hypha-hub` bin |
 | `crates/hypha-control` | pure arbitration policy — lock registry, takeover, merge/route (`pick_owner`) |
-| `crates/hypha-telemetry` | opt-in OTEL layer over `tracing` (OTLP export, W3C propagation) |
 | `crates/hypha-secret` + `-keyring`/`-dotenv`/`-cuora` | secrets port + OS-keyring, dotenv, and cuora (`cuora://<scope>/<NAME>`, CLI + `cuora serve` transports) impls |
 | `crates/hypha-service` + `-systemd` | service-install port + systemd impl |
 | `crates/hypha-serve-cli` | one-shot argv→op-params shim for ndjson `*-serve` binaries — the generic CLI front door (P-020) |
+| — (git dep) | telemetry lives in [9aia/lampy](https://github.com/9aia/lampy) (`lampy-telemetry` port + `lampy-telemetry-otel` impl, P-042) — `HYPHA_OTEL_*` remains a supported alias under the `LAMPY_OTEL_*` canonical contract |
 | `xtask` | check / test / coverage / fmt / install (release-builds `hypha` + `hypha-hub` → `~/.local/bin`) |
 
 Landed from peregrin's entity plane (PL-005); `hypha-http` carries

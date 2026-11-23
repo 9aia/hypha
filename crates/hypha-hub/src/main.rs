@@ -12,9 +12,11 @@ use hypha_hub::{HubConfig, hub_state, router};
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // fmt + RUST_LOG as always; OTLP span export layered on when
-    // HYPHA_OTEL_ENDPOINT / OTEL_EXPORTER_OTLP_* is set. The guard's
-    // Drop flushes the provider on exit.
-    let _telemetry = hypha_telemetry::init();
+    // LAMPY_OTEL_ENDPOINT / HYPHA_OTEL_ENDPOINT /
+    // OTEL_EXPORTER_OTLP_* is set. The guard's Drop flushes the
+    // provider on exit.
+    let spec = lampy_telemetry::TelemetrySpec::service("hypha-hub").with_alias("HYPHA");
+    let _telemetry = lampy_telemetry_otel::init(&spec, env!("CARGO_PKG_NAME"));
 
     let config = HubConfig::from_env().map_err(std::io::Error::other)?;
     let addr = config.socket_addr().map_err(std::io::Error::other)?;

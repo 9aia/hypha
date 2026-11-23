@@ -11,7 +11,8 @@ license.workspace = true
 workspace = true
 [dependencies]
 hypha-http.workspace = true
-hypha-telemetry.workspace = true
+lampy-telemetry.workspace = true
+lampy-telemetry-otel.workspace = true
 axum.workspace = true
 tokio.workspace = true
 tracing.workspace = true

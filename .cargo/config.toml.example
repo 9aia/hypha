@@ -3,7 +3,7 @@
 # .cargo/config.toml (e.g. peregrin's), listing every hypha crate the
 # consumer depends on:
 #
-# [patch."ssh://git@github.com/9aia/hypha.git"]
+# [patch."https://github.com/9aia/hypha.git"]
 # hypha-node-api = { path = "../hypha/crates/hypha-node-api" }
 # hypha-outbox = { path = "../hypha/crates/hypha-outbox" }
 # …

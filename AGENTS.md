@@ -49,6 +49,10 @@ It never names an integration's type. Neighbors own theirs:
 Op kinds are namespaced (`sepia.prompt`, `campaign.start`,
 `entity.delete`); snapshot bytes are opaque end-to-end.
 
+`hypha-push` is substrate by design — a generic JSON document
+store + VAPID with no integration types. Its borderline fit was
+reviewed and kept as-is (P-053 item 5); don't relocate it.
+
 ## Commands
 
 ```bash

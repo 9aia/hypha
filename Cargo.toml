@@ -15,9 +15,7 @@ members = [
     "crates/hypha-secret",
     "crates/hypha-secret-cuora",
     "crates/hypha-serve-cli",
-    "crates/hypha-service",
     "crates/hypha-sync",
-    "crates/hypha-systemd",
     "crates/hypha-telemetry",
     "xtask",
 ]
@@ -46,9 +44,7 @@ hypha-push = { path = "crates/hypha-push", version = "0.1.0" }
 hypha-secret = { path = "crates/hypha-secret", version = "0.1.0" }
 hypha-secret-cuora = { path = "crates/hypha-secret-cuora", version = "0.1.0" }
 hypha-serve-cli = { path = "crates/hypha-serve-cli", version = "0.1.0" }
-hypha-service = { path = "crates/hypha-service", version = "0.1.0" }
 hypha-sync = { path = "crates/hypha-sync", version = "0.1.0" }
-hypha-systemd = { path = "crates/hypha-systemd", version = "0.1.0" }
 hypha-telemetry = { path = "crates/hypha-telemetry", version = "0.1.0" }
 
 # External dependencies — pin conservative majors/minors.

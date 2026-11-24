@@ -1748,10 +1748,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hypha-service"
-version = "0.1.0"
-
-[[package]]
 name = "hypha-sync"
 version = "0.1.0"
 dependencies = [
@@ -1766,14 +1762,6 @@ dependencies = [
  "tokio-util",
  "tracing",
  "ureq",
-]
-
-[[package]]
-name = "hypha-systemd"
-version = "0.1.0"
-dependencies = [
- "hypha-service",
- "tempfile",
 ]
 
 [[package]]

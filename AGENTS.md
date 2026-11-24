@@ -25,7 +25,6 @@ Ports-and-adapters. Crates are named `hypha-<port>` (trait) and
 | `crates/hypha-control` | pure arbitration policy — lock registry, takeover, merge/route (`pick_owner`) |
 | `crates/hypha-telemetry` | opt-in OTEL layer over `tracing` (OTLP export, W3C propagation) |
 | `crates/hypha-secret` + `-keyring`/`-dotenv`/`-cuora` | secrets port + OS-keyring, dotenv, and cuora (`cuora://<scope>/<NAME>`, CLI + `cuora serve` transports) impls |
-| `crates/hypha-service` + `-systemd` | service-install port + systemd impl |
 | `crates/hypha-serve-cli` | one-shot argv→op-params shim for ndjson `*-serve` binaries — the generic CLI front door (P-020) |
 | `xtask` | check / test / coverage / fmt / install (release-builds `hypha` + `hypha-hub` → `~/.local/bin`) |
 

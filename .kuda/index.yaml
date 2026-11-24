@@ -5,18 +5,14 @@ modules:
 - docs
 - hypha
 - hypha-control
-- hypha-dotenv
 - hypha-http
 - hypha-hub
-- hypha-keyring
 - hypha-kv
 - hypha-kv-file
 - hypha-node
 - hypha-node-api
 - hypha-outbox
 - hypha-push
-- hypha-secret
-- hypha-secret-cuora
 - hypha-serve-cli
 - hypha-service
 - hypha-sync
@@ -29,24 +25,20 @@ commands:
 - cargo check
 - cargo test --workspace
 tree_digest: accda2845f2b3e83ed517e803f6d41696bb305d6
-files_total: 118
+files_total: 107
 provenance:
   files:
   - Cargo.toml
   - README.md
   - crates/hypha-control/Cargo.toml
-  - crates/hypha-dotenv/Cargo.toml
   - crates/hypha-http/Cargo.toml
   - crates/hypha-hub/Cargo.toml
-  - crates/hypha-keyring/Cargo.toml
   - crates/hypha-kv/Cargo.toml
   - crates/hypha-kv-file/Cargo.toml
   - crates/hypha-node/Cargo.toml
   - crates/hypha-node-api/Cargo.toml
   - crates/hypha-outbox/Cargo.toml
   - crates/hypha-push/Cargo.toml
-  - crates/hypha-secret/Cargo.toml
-  - crates/hypha-secret-cuora/Cargo.toml
   - crates/hypha-serve-cli/Cargo.toml
   - crates/hypha-service/Cargo.toml
   - crates/hypha-sync/Cargo.toml
@@ -57,18 +49,14 @@ provenance:
   - 9a452c345e7f72a754905e49e20d68d53c3b35a7
   - 38a3d21b1849452bce398d8f18bc5ef25dd55524
   - a3d961f5c7dfa6278af0976541ad5b46c46b9a8d
-  - 61b8f7d9a1ae26565f5cb2fc6f6b7f7e75338e81
   - 0d2001c96062879144b5e0d76e3c8d491d003105
   - 99f47f64d44fdb987ce81719fb2ef41983718bcf
-  - 46cec4a109552d28aad492f0ab6503fd00bfc877
   - d1b3d4d5eb0274a8681c987069ffd9e9d3528991
   - 0dbf5e6d13d0618e74233baddab06c41c99d0764
   - 4e2e0616cf09a1048fddfc493d6b9d5907533de1
   - cad127b79c162fee3c9db981f18347a00ccb47c8
   - 817f581000eae7852aaab238fdb69658b571a2fb
   - adc2ec675d3c1f213345e02197d09f88b1ab9da4
-  - eecb05c1a07240879c8f134922341966a02c598d
-  - 3ccc1d16e6440a38b49c797adea894239e49adc1
   - 922fa43fcaad6f3f42f384ea5e55ecd61643a2ae
   - ec8eda6a6ece491b1e21703ff35047bde7ab66ee
   - 1b5dc7314986fe0c4a7eac50ddebc10fab3acfc8

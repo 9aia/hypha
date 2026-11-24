@@ -31,7 +31,7 @@ belongs here.
   gate (`scripts/ci.sh` via the peregrin ci-gate campaign) enforces 100%
   line coverage.
 - Commits: conventional prefixes (`feat:`/`fix:`/`refactor:`/`docs:`/`chore:`).
-- Never commit secrets — `hypha-secret` takes names, not values.
+- Never commit secrets — secret refs take names, not values.
 
 ## Docs
 

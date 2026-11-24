@@ -8,10 +8,8 @@
 [crate_map.layers]
 "hypha-control" = "domain"
 "hypha-node-api" = "port"
-"hypha-service" = "port"
 "hypha-kv" = "port"
 "hypha-kv-file" = "adapter"
-"hypha-systemd" = "adapter"
 "hypha-http" = "adapter"
 "hypha-outbox" = "service"
 "hypha-sync" = "service"

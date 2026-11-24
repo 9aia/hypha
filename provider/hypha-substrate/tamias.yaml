@@ -11,7 +11,7 @@
 # pure env-driven services (every knob a HYPHA_* var), so the whole
 # runtime spec is manifest data: services, env_file, workdir.
 name: hypha-substrate
-version: "0.1.0"
+version: "0.2.0"
 type: files
 description: >-
   Hypha substrate daemons — `hypha serve` (entity-plane node host,

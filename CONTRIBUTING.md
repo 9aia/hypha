@@ -9,8 +9,8 @@ Fork freely under MIT.
 the node↔hub contract (trait + DTOs + ureq client + fake);
 `hypha-outbox` the durable per-entity op queue; `hypha-control` the
 pure arbitration policy; `hypha-{secret,keyring,dotenv}` the secrets
-port; `hypha-{service,systemd}` the service port; `hypha-telemetry`
-the OTEL layer. `project/` is the myco ledger worktree.
+port; `hypha-{service,systemd}` the service port. Telemetry is a git dep
+on 9aia/lampy (P-042). `project/` is the myco ledger worktree.
 
 ## Boundary
 

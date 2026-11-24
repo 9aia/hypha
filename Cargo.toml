@@ -18,7 +18,6 @@ members = [
     "crates/hypha-service",
     "crates/hypha-sync",
     "crates/hypha-systemd",
-    "crates/hypha-telemetry",
     "xtask",
 ]
 
@@ -49,7 +48,10 @@ hypha-serve-cli = { path = "crates/hypha-serve-cli", version = "0.1.0" }
 hypha-service = { path = "crates/hypha-service", version = "0.1.0" }
 hypha-sync = { path = "crates/hypha-sync", version = "0.1.0" }
 hypha-systemd = { path = "crates/hypha-systemd", version = "0.1.0" }
-hypha-telemetry = { path = "crates/hypha-telemetry", version = "0.1.0" }
+# Telemetry expertise lives in 9aia/lampy (P-042) — the tracing→OTLP
+# layer + env contract; pinned git dep, rev = lampy decouple/pl-023.
+lampy-telemetry = { git = "ssh://git@github.com/9aia/lampy.git", rev = "04c89924413c5e169e5b6c48d7e5897be53be85c", version = "0.1.0" }
+lampy-telemetry-otel = { git = "ssh://git@github.com/9aia/lampy.git", rev = "04c89924413c5e169e5b6c48d7e5897be53be85c", version = "0.1.0" }
 
 # External dependencies — pin conservative majors/minors.
 serde = { version = "1.0", features = ["derive"] }

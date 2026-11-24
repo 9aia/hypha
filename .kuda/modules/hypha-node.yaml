@@ -41,7 +41,8 @@ deps:
 - axum
 - clap
 - hypha-http
-- hypha-telemetry
+- lampy-telemetry
+- lampy-telemetry-otel
 - tokio
 - tracing
 - hypha-http
@@ -57,9 +58,9 @@ provenance:
   - crates/hypha-node/src/bin/hypha.rs
   - crates/hypha-node/src/lib.rs
   hashes:
-  - 4e2e0616cf09a1048fddfc493d6b9d5907533de1
-  - aad0bbc6f5706e61cb401495e1e107ef0d32212a
+  - 5b16ef137e8fc25f6a3fbf8a840f8250aecd6be4
+  - d336803d4b35ebd22866e11a707f9bd7f02c21aa
   - a075e161edbe8e277838c9c3b7278e680be22e62
-  commit_sha: a1176323906c681b1ed7037f0ab758b55d724b16
-  generated_at: '1795445890'
+  commit_sha: 920f959206f8bb2052e5508c6519a99fd65c5eab
+  generated_at: '1795528519'
   generator: kuda-template/0.1.4

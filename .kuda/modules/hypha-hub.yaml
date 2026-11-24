@@ -214,8 +214,9 @@ deps:
 - hypha-outbox
 - hypha-push
 - hypha-sync
-- hypha-telemetry
 - keyring
+- lampy-telemetry
+- lampy-telemetry-otel
 - serde
 - serde_json
 - sha2
@@ -265,20 +266,20 @@ provenance:
   - crates/hypha-hub/tests/sync_api.rs
   - crates/hypha-hub/tests/transfer.rs
   hashes:
-  - 99f47f64d44fdb987ce81719fb2ef41983718bcf
+  - 6ea675c45b9a2799c7ac63ef81b86e99b2150339
   - d1d2aeec300a54bcd44c0d4231726e479db7de21
   - f6d582ffc94611bf4b4ce7ff061c84107e725b8c
   - d54b6db7b201e0131533a2d940e2c07a7578f093
   - db73338362417dbe862ebe3b830ecb1fefc2f260
-  - 36a2e7cdf04b007e29620ad627759ba0f9c95f1b
-  - aa0d50c2593e40f172360952049d5142bb1920dc
-  - cedd51dd79c20e753cf469ae20849462de936a0d
+  - d96a0fdb7fafff3db83dc3007dda92d069a129f7
+  - 6f1f49d4c7ba41b9803866885ca1afb666cc8b4b
+  - 2f06edb2cc7e8e916f7b63597c6c87a814e93cd6
   - 5bfc682944ac8fb7f11ee81abea66261ad4b8647
   - 9eb7a5bafe278d25ca0a26580e480483e5a269e5
   - 964c30fbef20eb96b1aede573f4826e0c71860e5
   - c63eeff307ec1ecd91c66d52f4f24c92d0932699
   - 5f1da3f25e5e8b95e02aa3f8c7869dec7c997446
   - cfd3aec231f5356973c0391602fb5e041f502085
-  commit_sha: a1176323906c681b1ed7037f0ab758b55d724b16
-  generated_at: '1795445890'
+  commit_sha: 920f959206f8bb2052e5508c6519a99fd65c5eab
+  generated_at: '1795528519'
   generator: kuda-template/0.1.4

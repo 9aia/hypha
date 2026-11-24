@@ -214,7 +214,7 @@ deps:
 - hypha-kv
 - hypha-kv-file
 - hypha-push
-- hypha-telemetry
+- lampy-telemetry-otel
 - nix
 - serde
 - serde_json
@@ -275,12 +275,12 @@ provenance:
   - crates/hypha-http/tests/app.rs
   - crates/hypha-http/tests/kv.rs
   hashes:
-  - 0d2001c96062879144b5e0d76e3c8d491d003105
+  - c4ffd39a55e7e654415ba6624cf2a811daa1d97d
   - 7f4e3096b099c8f3d2748b94ceae9fc24c45ab62
   - 4ce0f867ae7bd3c120333c505d6d1a478fad64d2
   - be67d7e9922586e4f18d195678d6d185df02ef46
   - fef8c3f73a5ff6d25aa9b4af166f8df71fec07e5
-  - 739f97fcc69dc00c2c11295e32774338c6bdd1ee
+  - c1fa36b6704e5c0715ecbc502d5659c7ef2401bd
   - 82b2f1281cb3c5eaa902b5c41506eb619b650b3b
   - 9eae1005b41f3b1cac1a64afa79ed554f6f25bda
   - 7fbdba0a992f2d57c7667f1c235da8badffd4df9
@@ -292,6 +292,6 @@ provenance:
   - 3abbd9568f618e8e184735af257814197eafe169
   - 48b8efac938f655fc49dea3c5d0a9263ba3681b1
   - 1a7319f99088c247cdcc4f804e9a70c8aa08f20f
-  commit_sha: a1176323906c681b1ed7037f0ab758b55d724b16
-  generated_at: '1795445890'
+  commit_sha: 920f959206f8bb2052e5508c6519a99fd65c5eab
+  generated_at: '1795528519'
   generator: kuda-template/0.1.4

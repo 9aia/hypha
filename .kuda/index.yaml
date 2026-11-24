@@ -1,72 +1,59 @@
 name: hypha
-root: /home/luis/.local/share/decoupling-chief/worktrees/pl-025/hypha
+root: /home/luis/GitHub/9aia/workspace/repos/hypha
 purpose: The distributed substrate for agent workloads — entities, ops,
 modules:
+- docs
 - hypha
 - hypha-control
-- hypha-dotenv
 - hypha-http
 - hypha-hub
-- hypha-keyring
 - hypha-kv
 - hypha-kv-file
 - hypha-node
 - hypha-node-api
 - hypha-outbox
 - hypha-push
-- hypha-secret
-- hypha-secret-cuora
 - hypha-serve-cli
 - hypha-sync
-- hypha-telemetry
+- project
 - sturn-wal
 - xtask
 commands:
 - cargo check
 - cargo test --workspace
-tree_digest: 40656ae959728f382855497f1a4727df71c1b968
-files_total: 93
+tree_digest: f9438769599d833360ab7d2f690cafc60a9340fb
+files_total: 103
 provenance:
   files:
   - Cargo.toml
   - README.md
   - crates/hypha-control/Cargo.toml
-  - crates/hypha-dotenv/Cargo.toml
   - crates/hypha-http/Cargo.toml
   - crates/hypha-hub/Cargo.toml
-  - crates/hypha-keyring/Cargo.toml
   - crates/hypha-kv/Cargo.toml
   - crates/hypha-kv-file/Cargo.toml
   - crates/hypha-node/Cargo.toml
   - crates/hypha-node-api/Cargo.toml
   - crates/hypha-outbox/Cargo.toml
   - crates/hypha-push/Cargo.toml
-  - crates/hypha-secret/Cargo.toml
-  - crates/hypha-secret-cuora/Cargo.toml
   - crates/hypha-serve-cli/Cargo.toml
   - crates/hypha-sync/Cargo.toml
-  - crates/hypha-telemetry/Cargo.toml
   - xtask/Cargo.toml
   hashes:
-  - 195075e5d198bd21c14c67021e2cd8b65772ae78
+  - 382eacf50e535ce4b2a61af602d76ac8ae3ea4a7
   - 38a3d21b1849452bce398d8f18bc5ef25dd55524
   - a3d961f5c7dfa6278af0976541ad5b46c46b9a8d
-  - 61b8f7d9a1ae26565f5cb2fc6f6b7f7e75338e81
-  - 0d2001c96062879144b5e0d76e3c8d491d003105
-  - 99f47f64d44fdb987ce81719fb2ef41983718bcf
-  - 46cec4a109552d28aad492f0ab6503fd00bfc877
+  - c4ffd39a55e7e654415ba6624cf2a811daa1d97d
+  - 6ea675c45b9a2799c7ac63ef81b86e99b2150339
   - d1b3d4d5eb0274a8681c987069ffd9e9d3528991
   - 0dbf5e6d13d0618e74233baddab06c41c99d0764
-  - 4e2e0616cf09a1048fddfc493d6b9d5907533de1
+  - 5b16ef137e8fc25f6a3fbf8a840f8250aecd6be4
   - cad127b79c162fee3c9db981f18347a00ccb47c8
   - 817f581000eae7852aaab238fdb69658b571a2fb
   - adc2ec675d3c1f213345e02197d09f88b1ab9da4
-  - eecb05c1a07240879c8f134922341966a02c598d
-  - 3ccc1d16e6440a38b49c797adea894239e49adc1
   - 922fa43fcaad6f3f42f384ea5e55ecd61643a2ae
   - 1b5dc7314986fe0c4a7eac50ddebc10fab3acfc8
-  - 67cb4fbb952e882cb330403520287ae84fed11fb
   - b884f908a56302753d1161daa824eafb87714acb
-  commit_sha: a1176323906c681b1ed7037f0ab758b55d724b16
-  generated_at: '1795445890'
+  commit_sha: 920f959206f8bb2052e5508c6519a99fd65c5eab
+  generated_at: '1795528519'
   generator: kuda/0.1.0

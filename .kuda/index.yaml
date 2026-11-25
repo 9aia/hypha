@@ -21,7 +21,7 @@ modules:
 commands:
 - cargo check
 - cargo test --workspace
-tree_digest: f9438769599d833360ab7d2f690cafc60a9340fb
+tree_digest: 5efda9563cd48e69940e2f4068f98239a54552e4
 files_total: 103
 provenance:
   files:
@@ -40,7 +40,7 @@ provenance:
   - crates/hypha-sync/Cargo.toml
   - xtask/Cargo.toml
   hashes:
-  - 382eacf50e535ce4b2a61af602d76ac8ae3ea4a7
+  - 66cdecdedc05d6f28f33007555e28582533966cf
   - 38a3d21b1849452bce398d8f18bc5ef25dd55524
   - a3d961f5c7dfa6278af0976541ad5b46c46b9a8d
   - c4ffd39a55e7e654415ba6624cf2a811daa1d97d
@@ -54,6 +54,6 @@ provenance:
   - 922fa43fcaad6f3f42f384ea5e55ecd61643a2ae
   - 1b5dc7314986fe0c4a7eac50ddebc10fab3acfc8
   - b884f908a56302753d1161daa824eafb87714acb
-  commit_sha: 920f959206f8bb2052e5508c6519a99fd65c5eab
-  generated_at: '1795528519'
+  commit_sha: edd1e120c3bfd22b9603e0fd9c5dc94f6f8d7544
+  generated_at: '1795566191'
   generator: kuda/0.1.0

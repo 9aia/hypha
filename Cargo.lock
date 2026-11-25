@@ -1578,7 +1578,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-control"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1586,7 +1586,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-http"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -1614,7 +1614,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-hub"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -1644,7 +1644,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-kv"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1652,7 +1652,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-kv-file"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "hypha-kv",
  "serde",
@@ -1662,7 +1662,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-node"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "clap",
@@ -1675,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-node-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "serde",
@@ -1686,7 +1686,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-outbox"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rusqlite",
  "serde",
@@ -1700,7 +1700,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-push"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "futures",
@@ -1715,7 +1715,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-serve-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde_json",
  "thiserror 2.0.21",
@@ -1723,7 +1723,7 @@ dependencies = [
 
 [[package]]
 name = "hypha-sync"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "hypha-outbox",
  "rusqlite",
@@ -4298,7 +4298,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
 ]

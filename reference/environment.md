@@ -4,9 +4,15 @@ Hypha-native variables (landed crates):
 
 | Variable | Crate | Meaning |
 | --- | --- | --- |
-| `HYPHA_OTEL_ENDPOINT` | `hypha-telemetry` | OTLP base endpoint; `/v1/traces` appended when no path present |
-| `HYPHA_OTEL_SERVICE_NAME` | `hypha-telemetry` | service.name (default `"hypha"`, `OTEL_SERVICE_NAME` also honored) |
-| `OTEL_EXPORTER_OTLP_*` | `hypha-telemetry` | standard OTLP vars also enable export |
+| `LAMPY_OTEL_ENDPOINT` | `lampy-telemetry` | OTLP base endpoint (canonical); `/v1/traces` appended when no path present |
+| `HYPHA_OTEL_ENDPOINT` | `lampy-telemetry` | legacy alias for the endpoint — still honored |
+| `LAMPY_OTEL_SERVICE_NAME` / `HYPHA_OTEL_SERVICE_NAME` | `lampy-telemetry` | service.name (default `"hypha"`, `OTEL_SERVICE_NAME` also honored) |
+| `OTEL_EXPORTER_OTLP_*` | `lampy-telemetry` | standard OTLP vars also enable export |
+
+Telemetry lives in [9aia/lampy](https://github.com/9aia/lampy)
+(`lampy-telemetry` port + `lampy-telemetry-otel` impl, P-042) —
+`LAMPY_OTEL_*` is the canonical prefix, `HYPHA_OTEL_*` a supported
+per-consumer alias.
 
 Standard OTEL vars (`OTEL_*`) are honored per OpenTelemetry semantic
 conventions.

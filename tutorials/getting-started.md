@@ -88,13 +88,13 @@ see [reference/crates](/reference/crates) for the full surface.
 
 ## Upgrading from peregrin — secrets move
 
-`hypha-keyring` stores under the `secret-tool` service attribute
-`"hypha"` (was `"peregrin"`), and `hypha-hub` node credentials live
-under `"hypha-hub"` (was `"peregrin-hub"`). **There is no automatic
+`hypha-hub`'s credential store keeps node tokens under the
+`secret-tool` service attribute `"hypha-hub"` (was `"peregrin-hub"`).
+**There is no automatic
 migration** — old entries are orphaned, not moved. After upgrading:
 
 - re-run pairing (`POST /api/pair` flow) or re-store secrets with
-  `secret-tool store --label "hypha: <name>" service hypha name <name>`
+  `secret-tool store --label "hypha-hub: node/<id>" service hypha-hub node/<id> <token>`
 - hub node tokens: either re-pair each node, or let an env
   `HYPHA_NODES` `@token`/`HYPHA_NODE_TOKEN` re-seed the store on the
   next boot (`HYPHA_CREDENTIAL_STORE` picks keyring vs file backend)

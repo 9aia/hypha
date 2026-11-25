@@ -12,15 +12,8 @@ Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
 | `hypha-control` | domain | Arbitration — lock registry, takeover policy, merge/route |
 | `hypha-kv` | port | Node-local key/value store port — namespaced JSON values with per-namespace visibility (P-006) |
 | `hypha-node-api` | port | Node API port + wire DTOs — the hub/client ↔ node contract. NodeApi trait, ureq client, FakeNodeApi stub, rewind selector, convert targets. No leptos, no DOM. |
-| `hypha-secret` | port | Secret-store port |
-| `hypha-service` | port | Service-install port |
-| `hypha-dotenv` | adapter | dotenv-file impl of the secret port |
 | `hypha-http` | adapter | Hypha HTTP substrate — axum adapter serving /api/entities\*, /api/events, node/pairing/auth, and push over a HyphaState |
-| `hypha-keyring` | adapter | OS-keyring impl of the secret port |
 | `hypha-kv-file` | adapter | JSON-file impl of the hypha-kv store port — atomic tmp+rename writes (P-006) |
-| `hypha-secret-cuora` | adapter | Cuora `Secrets` impl — resolves `cuora://&lt;scope&gt;/&lt;NAME&gt;` through the cuora CLI or `cuora serve` |
-| `hypha-systemd` | adapter | systemd impl of the service port |
-| `hypha-telemetry` | adapter | Opt-in OpenTelemetry layer over the tracing stack — OTLP export, W3C context propagation |
 | `hypha-outbox` | service | Durable per-entity FIFO outbox for writes queued while a node is offline |
 | `hypha-push` | service | Web Push notifications over a JSON document store — VAPID keys persist in config; subscriptions prune on 404/410 |
 | `hypha-sync` | service | Hub-side sync layer — SQLite projection of paired nodes' entity indexes + outbox drain on reconnect |

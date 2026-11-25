@@ -91,13 +91,13 @@ see [reference/crates](/reference/crates) for the full surface.
 
 ## Upgrading from peregrin — secrets move
 
-`hypha-keyring` stores under the `secret-tool` service attribute
-`"hypha"` (was `"peregrin"`), and `hypha-hub` node credentials live
-under `"hypha-hub"` (was `"peregrin-hub"`). **There is no automatic
+`hypha-hub`'s credential store keeps node tokens under the
+`secret-tool` service attribute `"hypha-hub"` (was `"peregrin-hub"`).
+**There is no automatic
 migration** — old entries are orphaned, not moved. After upgrading:
 
 * re-run pairing (`POST /api/pair` flow) or re-store secrets with
-  `secret-tool store --label "hypha: <name>" service hypha name <name>`
+  `secret-tool store --label "hypha-hub: node/<id>" service hypha-hub node/<id> <token>`
 * hub node tokens: either re-pair each node, or let an env
   `HYPHA_NODES` `@token`/`HYPHA_NODE_TOKEN` re-seed the store on the
   next boot (`HYPHA_CREDENTIAL_STORE` picks keyring vs file backend)
@@ -310,9 +310,15 @@ and submit ops through the hub.
 
 ## Ports and adapters
 
-Every I/O seam is a port (`hypha-secret`, `hypha-service`, …) with
-impls behind it (`-keyring`, `-dotenv`, `-systemd`). The substrate
-contracts are pure — `hypha-control` has no I/O at all.
+The substrate's own I/O seam is `hypha-kv` (node-local KV, `-file`
+impl); hub node credentials go through the `keyring` crate with a
+file fallback. The generic half of ports-and-adapters lives in
+sibling repos now — secrets resolve through cuora's
+`cuora-secret*` family and service lifecycle through tamias's
+`tamias-deploy-*` where a consumer needs them, and telemetry is
+`lampy-telemetry(-otel)` — so no `hypha-secret`/`hypha-service`/
+`hypha-telemetry` crates remain. The substrate contracts are pure —
+`hypha-control` has no I/O at all.
 
 ## Dataflow
 
@@ -585,15 +591,8 @@ Rust workspace, ports-and-adapters. Lints are strict (pedantic warn,
 | `hypha-control` | domain | Arbitration — lock registry, takeover policy, merge/route |
 | `hypha-kv` | port | Node-local key/value store port — namespaced JSON values with per-namespace visibility (P-006) |
 | `hypha-node-api` | port | Node API port + wire DTOs — the hub/client ↔ node contract. NodeApi trait, ureq client, FakeNodeApi stub, rewind selector, convert targets. No leptos, no DOM. |
-| `hypha-secret` | port | Secret-store port |
-| `hypha-service` | port | Service-install port |
-| `hypha-dotenv` | adapter | dotenv-file impl of the secret port |
 | `hypha-http` | adapter | Hypha HTTP substrate — axum adapter serving /api/entities\*, /api/events, node/pairing/auth, and push over a HyphaState |
-| `hypha-keyring` | adapter | OS-keyring impl of the secret port |
 | `hypha-kv-file` | adapter | JSON-file impl of the hypha-kv store port — atomic tmp+rename writes (P-006) |
-| `hypha-secret-cuora` | adapter | Cuora `Secrets` impl — resolves `cuora://&lt;scope&gt;/&lt;NAME&gt;` through the cuora CLI or `cuora serve` |
-| `hypha-systemd` | adapter | systemd impl of the service port |
-| `hypha-telemetry` | adapter | Opt-in OpenTelemetry layer over the tracing stack — OTLP export, W3C context propagation |
 | `hypha-outbox` | service | Durable per-entity FIFO outbox for writes queued while a node is offline |
 | `hypha-push` | service | Web Push notifications over a JSON document store — VAPID keys persist in config; subscriptions prune on 404/410 |
 | `hypha-sync` | service | Hub-side sync layer — SQLite projection of paired nodes' entity indexes + outbox drain on reconnect |
@@ -617,9 +616,15 @@ Hypha-native variables (landed crates):
 
 | Variable | Crate | Meaning |
 | --- | --- | --- |
-| `HYPHA_OTEL_ENDPOINT` | `hypha-telemetry` | OTLP base endpoint; `/v1/traces` appended when no path present |
-| `HYPHA_OTEL_SERVICE_NAME` | `hypha-telemetry` | service.name (default `"hypha"`, `OTEL_SERVICE_NAME` also honored) |
-| `OTEL_EXPORTER_OTLP_*` | `hypha-telemetry` | standard OTLP vars also enable export |
+| `LAMPY_OTEL_ENDPOINT` | `lampy-telemetry` | OTLP base endpoint (canonical); `/v1/traces` appended when no path present |
+| `HYPHA_OTEL_ENDPOINT` | `lampy-telemetry` | legacy alias for the endpoint — still honored |
+| `LAMPY_OTEL_SERVICE_NAME` / `HYPHA_OTEL_SERVICE_NAME` | `lampy-telemetry` | service.name (default `"hypha"`, `OTEL_SERVICE_NAME` also honored) |
+| `OTEL_EXPORTER_OTLP_*` | `lampy-telemetry` | standard OTLP vars also enable export |
+
+Telemetry lives in [9aia/lampy](https://github.com/9aia/lampy)
+(`lampy-telemetry` port + `lampy-telemetry-otel` impl, P-042) —
+`LAMPY_OTEL_*` is the canonical prefix, `HYPHA_OTEL_*` a supported
+per-consumer alias.
 
 Standard OTEL vars (`OTEL_*`) are honored per OpenTelemetry semantic
 conventions.

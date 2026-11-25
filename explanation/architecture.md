@@ -53,9 +53,15 @@ and submit ops through the hub.
 
 ## Ports and adapters
 
-Every I/O seam is a port (`hypha-secret`, `hypha-service`, …) with
-impls behind it (`-keyring`, `-dotenv`, `-systemd`). The substrate
-contracts are pure — `hypha-control` has no I/O at all.
+The substrate's own I/O seam is `hypha-kv` (node-local KV, `-file`
+impl); hub node credentials go through the `keyring` crate with a
+file fallback. The generic half of ports-and-adapters lives in
+sibling repos now — secrets resolve through cuora's
+`cuora-secret*` family and service lifecycle through tamias's
+`tamias-deploy-*` where a consumer needs them, and telemetry is
+`lampy-telemetry(-otel)` — so no `hypha-secret`/`hypha-service`/
+`hypha-telemetry` crates remain. The substrate contracts are pure —
+`hypha-control` has no I/O at all.
 
 ## Dataflow
 

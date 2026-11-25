@@ -38,8 +38,8 @@ hypha-serve-cli = { path = "crates/hypha-serve-cli", version = "0.2.0" }
 hypha-sync = { path = "crates/hypha-sync", version = "0.2.0" }
 # Telemetry expertise lives in 9aia/lampy (P-042) — the tracing→OTLP
 # layer + env contract; pinned git dep, rev = lampy decouple/pl-023.
-lampy-telemetry = { git = "ssh://git@github.com/9aia/lampy.git", rev = "04c89924413c5e169e5b6c48d7e5897be53be85c", version = "0.1.0" }
-lampy-telemetry-otel = { git = "ssh://git@github.com/9aia/lampy.git", rev = "04c89924413c5e169e5b6c48d7e5897be53be85c", version = "0.1.0" }
+lampy-telemetry = { git = "ssh://git@github.com/9aia/lampy.git", rev = "7fc154c3d6e516221658414a6d1c7d9617792e3d", version = "0.2.0" }
+lampy-telemetry-otel = { git = "ssh://git@github.com/9aia/lampy.git", rev = "7fc154c3d6e516221658414a6d1c7d9617792e3d", version = "0.2.0" }
 
 # External dependencies — pin conservative majors/minors.
 serde = { version = "1.0", features = ["derive"] }

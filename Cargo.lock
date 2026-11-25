@@ -2027,16 +2027,16 @@ dependencies = [
 
 [[package]]
 name = "lampy-telemetry"
-version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/lampy.git?rev=04c89924413c5e169e5b6c48d7e5897be53be85c#04c89924413c5e169e5b6c48d7e5897be53be85c"
+version = "0.2.0"
+source = "git+ssh://git@github.com/9aia/lampy.git?rev=7fc154c3d6e516221658414a6d1c7d9617792e3d#7fc154c3d6e516221658414a6d1c7d9617792e3d"
 dependencies = [
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "lampy-telemetry-otel"
-version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/lampy.git?rev=04c89924413c5e169e5b6c48d7e5897be53be85c#04c89924413c5e169e5b6c48d7e5897be53be85c"
+version = "0.2.0"
+source = "git+ssh://git@github.com/9aia/lampy.git?rev=7fc154c3d6e516221658414a6d1c7d9617792e3d#7fc154c3d6e516221658414a6d1c7d9617792e3d"
 dependencies = [
  "http 1.5.0",
  "lampy-telemetry",
